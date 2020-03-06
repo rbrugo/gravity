@@ -1,0 +1,9 @@
+[requires]
+sdl2/2.0.10@bincrafters/stable
+range-v3/0.10.0@ericniebler/stable
+fmt/6.0.0@bincrafters/stable
+entt/3.2.2@skypjack/stable
+nlohmann_json/3.7.3@_/_
+
+[generators]
+cmake
