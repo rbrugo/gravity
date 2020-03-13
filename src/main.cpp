@@ -11,8 +11,10 @@
 #include <csignal>                   // signal handling
 #include <thread>                    // for multithreading
 #include <iostream>                  // terminal input-output
+#include <execution>
 
 #include <fmt/format.h>              // formatting functions
+#include <fmt/chrono.h>
 
 #include <linear_algebra.hpp>        // vectors
 #include <entt/entt.hpp>             // entity component system - where the data is stored
@@ -52,16 +54,17 @@ void update(std::shared_mutex & mtx, entt::registry & reg, units::si::time<units
 {
     // Where updated values are stored
     auto updated = std::map<entt::entity, std::pair<brun::position, brun::velocity>>{};
+    auto updated_mtx = std::mutex{};
 
     //A list of objects which are movable
-    auto movables = reg.view<brun::position, brun::velocity, brun::mass>();
+    auto movables = reg.group<brun::position, brun::velocity, brun::mass>();
     // A list of objects which can generate a g-field
     // NB an object doesn't need to be movable (to have a velocity) to produce a gravitational field
     // Only requirements to produce a g-field are position and mass
     // In reality, every object have a mass velocity, but in a planetary system the central star may be
     //  considered at rest (at the cost of a bit of accuracy)
-    auto massives = reg.view<brun::position, brun::mass>();
-    for (auto const target : movables) { // Iterate each object and compute his acceleration
+    auto massives = reg.group<brun::position, brun::mass>();
+    std::for_each(std::execution::par_unseq, movables.begin(), movables.end(), [&](auto const target) {
         // Function needed to compute acceleration on a target object, given his current position
         auto compute_acceleration = [&massives, &reg](auto const target, auto const & position) mutable {
             using mass_on_sq_dist = la::fs_vector<decltype(1._Yg/(1._Gm*1._Gm)), 3>;
@@ -95,13 +98,14 @@ void update(std::shared_mutex & mtx, entt::registry & reg, units::si::time<units
         auto const r_fin = r0 + v_mid * dt;
         auto const v_fin = v0 + a_mid * dt;
 
+        auto _ = std::lock_guard{updated_mtx};
         updated.insert_or_assign(target, std::make_pair(r_fin, v_fin));
-    }
+    });
     auto lock = std::shared_lock{mtx};  // Lock the registry so I can write in it safely (bc multithread)
     for (auto const & [target, vectors] : updated) {
         auto const & [position, velocity] = vectors;
-        reg.replace<brun::position>(target, position);
-        reg.replace<brun::velocity>(target, velocity);
+        reg.assign_or_replace<brun::position>(target, position);
+        reg.assign_or_replace<brun::velocity>(target, velocity);
     }
 }
 
@@ -115,7 +119,7 @@ int main(int argc, char * argv[])
     // Init graphics
     auto mgr = SDLpp::system_manager{SDLpp::flag::init::everything};
     if (not mgr) {
-        brun::print(std::cerr, "Cannot init SDL: {} | {}\n",
+        fmt::print(stderr, "Cannot init SDL: {} | {}\n",
                     std::string{SDL_GetError()}, std::string{IMG_GetError()});
         return 2;
     }
@@ -123,7 +127,7 @@ int main(int argc, char * argv[])
     auto window = SDLpp::window{"solar system", {1200, 900}};
     auto renderer = SDLpp::renderer{window, SDLpp::flag::renderer::accelerated};
     if (not renderer) {
-        brun::print(std::cerr, "Cannot create the renderer: {}\n", SDL_GetError());
+        fmt::print(stderr, "Cannot create the renderer: {}\n", SDL_GetError());
         std::exit(1);
     }
     renderer.set_draw_color(SDLpp::colors::black);
@@ -131,10 +135,12 @@ int main(int argc, char * argv[])
     // Some config params - some will be configurable from the config file in the future
     const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
     constexpr auto first_day = 1;
-    constexpr auto last_day = 365;
+    constexpr auto last_day = 365 / 12;  // For testing purpose
     constexpr auto fps = units::si::frequency<units::si::hertz>{60};
-    constexpr auto dt = 1q_min;
-    auto const production_ratio = 2.q_d/1q_s;     // May be selected runtime
+    constexpr auto dt = 10.q_min;        // Maximum of the simulation
+
+    auto const days_per_second = 1.q_d;  // Days to compute every second - may be selected runtime
+    auto const days_per_millisecond = days_per_second / 1000;
 
     auto registry = brun::load_data(filename); // Registry is loaded from file
 
@@ -143,27 +149,47 @@ int main(int argc, char * argv[])
     auto worker = std::jthread{brun::render_cycle(mtx, renderer, registry, view_radius, fps)};
     // Computes the simulation from `first_dat` to `last_day` with a step of `dt` and a cap
     //  of `production_ratio` days each second
+    auto accumulator = 24.q_h;
+    // Timestep calculation for better accuracy
+    // Each ms must be computed the simulation for          Δt := days_per_millisecond
+    //  in small steps of size                              dt := dt
+    //  so an idea is to compute                            n  := floor(Δt/dt) = floor(η)
+    //  steps of simulation with duration dt each ms.
+    // But Δt < dt: in those cases, η < 1 => n = 0.
+    // It's better to define a new quantity dτ such that    η·dt = (n+1)·dτ
+    // So we will use                                       dτ := dt·η/(n+1)
+    //  and will make `n+1` steps of simulation with duration dτ each.
+    auto const ratio = days_per_millisecond / dt;
+    auto const n_steps = std::floor(ratio) + 1;
+    auto const timestep = dt * ratio / n_steps;
+    auto const total_calc_begin = std::chrono::steady_clock::now();
+    fmt::print(stderr, "Δt: {}\ndt: {}\ntimestep: {}\n", days_per_millisecond, dt, timestep);
     for (auto const day : rvw::iota(first_day, last_day)) {
+        accumulator -= 24.q_h;
         brun::dump(registry, day);  // Once a day, dumps data on terminal
-        auto accumulator = decltype(dt){0};
+        auto const day_calc_begin = std::chrono::steady_clock::now();
         do {
-            const auto begin = std::chrono::system_clock::now();
-            auto sub_accumulator = decltype(dt){0};
-            do {
-                update(mtx, registry, dt);
-                sub_accumulator += dt;
-            } while (sub_accumulator < production_ratio * 1.q_s / 1000);
-            accumulator += sub_accumulator;
-            std::this_thread::sleep_until(begin + std::chrono::milliseconds{1});
+            auto const begin = std::chrono::steady_clock::now();
+            for ([[maybe_unused]] auto _ : rvw::iota(0, n_steps)) {
+                update(mtx, registry, timestep);
+                accumulator += timestep;
+            }
+            std::this_thread::sleep_until(begin + std::chrono::microseconds{900});
+
         } while (accumulator < 24.q_h);
-        auto const lock = std::scoped_lock{mtx};
-        /* auto const idx = day - first_day; */
-        registry.view<brun::position, brun::trail>().each([](auto const & p, auto & t) {
-            t.push_front(p);
-            t.pop_back();
-            /* auto const i = idx % t.size(); */
-            /* t[i] = p; */
-        });
+        auto const day_calc_end = std::chrono::steady_clock::now();
+
+        {
+            auto const lock = std::scoped_lock{mtx};
+
+            registry.view<brun::position, brun::trail>().each([](auto const & p, auto & t) {
+                t.push_front(p);
+                t.pop_back();
+            });
+        }
+        auto const day_calc_time = (day_calc_end - day_calc_begin);
+        auto const avg_calc_time = (day_calc_end - total_calc_begin)/(day - first_day + 1);
+        fmt::print("This day calc time: {}\nAverage simulation rate: {}\n", day_calc_time, avg_calc_time);
     }
     brun::dump(registry, last_day);
     [[maybe_unused]] auto const stopped = worker.request_stop();
