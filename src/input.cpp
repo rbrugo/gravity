@@ -30,12 +30,12 @@ namespace detail
         -> std::variant<nlohmann::json, toml::table>
     {
         if (not std::filesystem::exists(data_path)) {
-            brun::print(std::cerr, "Error - can't find file {}\n", data_path);
+            fmt::print(stderr, "Error - can't find file {}\n", data_path);
             std::exit(1);
         }
         auto file = std::ifstream{data_path};
         if (not file.is_open()) {
-            brun::print(std::cerr, "Error - can't open file {}\n", data_path);
+            fmt::print(stderr, "Error - can't open file {}\n", data_path);
             std::exit(2);
         }
 
@@ -48,7 +48,7 @@ namespace detail
         } else if (ext == ".toml") {
             return toml::parse(file);
         } else {
-            brun::print(std::cerr, "Error - invalid file format (json and toml files are supported)\n");
+            fmt::print(stderr, "Error - invalid file format (json and toml files are supported)\n");
             std::exit(3);
         }
 
@@ -177,7 +177,6 @@ namespace detail
         brun::velocity const base_velocity = brun::velocity{} * 0.
     )
     {
-        /* auto const & table = *node.as_table(); */
         auto const name     = table["name"].as_string()->get();
         auto const mass     = expect<double>(table, "mass");
         auto const pos_node = table["distance"];
@@ -190,28 +189,30 @@ namespace detail
         auto const velocity = build_vector<brun::velocity>(vel_node);
 
         if (not mass.has_value()) {
-            brun::print(std::cerr, "{}\n", mass.error());
+            fmt::print(stderr, "{}\n", mass.error());
             std::exit(5);
         }
         if (not position.has_value()) {
-            std::cerr << fmt::format(position.error(), "position") << "\n";
+            fmt::print(stderr, position.error(), "position");
+            fmt::print("\n");
             std::exit(6);
         }
         if (not velocity.has_value()) {
-            std::cerr << fmt::format(velocity.error(), "velocity") << "\n";
+            fmt::print(stderr, velocity.error(), "velocity");
+            fmt::print("\n");
             std::exit(7);
         }
         if (not px_radius.has_value()) {
-            std::cerr << px_radius.error() << "\n";
+            fmt::print(stderr, "{}\n", px_radius.error());
             std::exit(7);
         }
         if (*px_radius < 0) {
-            std::cerr << "Error - cannot use a negative value for " << name << " px_radius\n";
+            fmt::print(stderr, "Error - cannot use a negative value for {} px_radius\n", name);
             std::exit(8);
         }
 
         // Create a new entity inside the registry and register its attributes
-        std::cerr << "Registered object \"" << name << "\"\n";
+        fmt::print("Registered object \"{}\"\n", name);
         auto const entity = registry.create();
         registry.assign<brun::tag>(entity, name);
         registry.assign<brun::position>(entity, position.value() + base_position);
@@ -228,7 +229,7 @@ namespace detail
 
         // Planets
         if (auto const satellites_tbl = table["satellites"].as_array(); satellites_tbl) {
-            std::cerr << "Registering " << name << " satellites:\n";
+            fmt::print("Registering {} satellites:\n", name);
             auto const & satellites = *satellites_tbl;
             for (auto const & subnode : satellites) {
                 auto const & table = *subnode.as_table();
@@ -253,15 +254,15 @@ namespace detail
         auto const default_color        = expect<int32_t>(toml["config"], "default_color", 0xFFFFFF);
         auto const default_px_radius    = expect<float>(toml["config"], "default_px_radius", 5.);
         if (not default_color.has_value()) {
-            std::cerr << default_px_radius.error() << "\n";
+            fmt::print(stderr, "{}\n", default_color.error());
             std::exit(7);
         }
         if (not default_px_radius.has_value()) {
-            std::cerr << default_px_radius.error() << "\n";
+            fmt::print(stderr, "{}\n", default_px_radius.error());
             std::exit(7);
         }
         if (*default_px_radius < 0) {
-            std::cerr << "Error - cannot use a negative value for the default px_radius\n";
+            fmt::print(stderr, "Error - cannot use a negative value for the default px_radius\n");
             std::exit(8);
         }
 
@@ -270,61 +271,6 @@ namespace detail
         for (auto const & node : planets) {
             auto const & table = *node.as_table();
             extract_object(registry, table, default_trail_length, default_color, default_px_radius);
-            /* auto const name     = table["name"].as_string()->get(); */
-            /* auto const mass     = expect<double>(table, "mass"); */
-            /* auto const pos_node = table["distance_from_sun"]; */
-            /* auto const vel_node = table["orbital_velocity"]; // TODO: not needed for all objects */
-            /* auto const trail    = expect<int32_t>(table, "motion_trail_length", *default_trail_length); */
-            /* auto const color    = expect<int32_t>(table, "color", *default_color); */
-            /* auto const px_radius = expect<float>(table, "px_radius", *default_px_radius); */
-
-            /* auto const position = build_vector<brun::position>(pos_node); */
-            /* auto const velocity= build_vector<brun::velocity>(vel_node); */
-
-            /* if (not mass.has_value()) { */
-            /*     brun::print(std::cerr, "{}\n", mass.error()); */
-            /*     std::exit(5); */
-            /* } */
-            /* if (not position.has_value()) { */
-            /*     std::cerr << fmt::format(position.error(), "position") << "\n"; */
-            /*     std::exit(6); */
-            /* } */
-            /* if (not velocity.has_value()) { */
-            /*     std::cerr << fmt::format(velocity.error(), "velocity") << "\n"; */
-            /*     std::exit(7); */
-            /* } */
-            /* if (not px_radius.has_value()) { */
-            /*     std::cerr << px_radius.error() << "\n"; */
-            /*     std::exit(7); */
-            /* } */
-            /* if (*px_radius < 0) { */
-            /*     std::cerr << "Error - cannot use a negative value for " << name << " px_radius\n"; */
-            /*     std::exit(8); */
-            /* } */
-
-            /* // Create a new entity inside the registry and register its attributes */
-            /* auto const entity = registry.create(); */
-            /* registry.assign<brun::tag>(entity, name); */
-            /* registry.assign<brun::position>(entity, position.value()); */
-            /* registry.assign<brun::velocity>(entity, velocity.value()); */
-            /* registry.assign<brun::mass>(entity, *mass * 1._Yg); */
-            /* registry.assign<SDLpp::color>(entity, SDLpp::color{ */
-            /*     uint8_t((*color & 0xFF0000) >> 16), uint8_t((*color & 0x00FF00) >> 8), uint8_t(*color & 0x0000FF) */
-            /* }); */
-            /* registry.assign<brun::px_radius>(entity, *px_radius); */
-            /* if (auto const n = trail.value(); n > 0) { */
-            /*     auto & tail = registry.assign<brun::trail>(entity); */
-            /*     tail.resize(std::clamp(n, 0, 300), *position); */
-            /* } */
-
-            /* // Planets */
-            /* if (auto const satellites_tbl = table["satellites"].as_array(); satellites_tbl) { */
-            /*     auto const & satellites = *satellites_tbl; */
-            /*     for (auto const & subnode : satellites) { */
-            /*         auto const & table = *subnode.as_table(); */
-
-            /*     } */
-            /* } */
         }
         return registry;
     }

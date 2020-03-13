@@ -8,8 +8,8 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
-/* #include <cstdint> */
 #include <iostream>
+#include <deque>
 
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -27,17 +27,6 @@
 
 namespace brun
 {
-
-// Utilities to print stuff on screen
-inline void print(std::ostream & out, std::string_view const fmt, auto &&... args) noexcept
-{
-    out << fmt::format(fmt, std::forward<decltype(args)&&>(args)...);
-}
-
-inline void print(std::string_view const fmt, auto &&... args) noexcept
-{
-    return print(std::cout, fmt,  std::forward<decltype(args)&&>(args)...);
-}
 
 // Formatted table on terminal
 void dump(entt::registry & reg, std::optional<int> day = std::nullopt);
@@ -68,7 +57,6 @@ namespace units::si
     struct yottagram : prefixed_unit<yottagram, yotta, gram> {};
 } // namespace units
 
-#include <deque>
 namespace brun
 {
     // Some type aliases

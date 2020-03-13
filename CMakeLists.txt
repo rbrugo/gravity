@@ -26,30 +26,16 @@ if (CCACHE_FOUND AND CCACHE_SUPPORT)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
 endif()
 
-if (MSVC)
-    target_compile_options( gravity PRIVATE /W4 )
-else()
-    # target_compile_options( gravity PRIVATE
-    #     -Wall -Wextra -Wpedantic -flto $<$<CXX_COMPILER_ID:GNU>:-fconcepts>
-    # )
-    target_compile_options( gravity PRIVATE
-        -Wall -Wextra -Wpedantic $<$<CXX_COMPILER_ID:GNU>:-fconcepts -fsanitize=undefined>
-    )
-    target_link_options( gravity PRIVATE
-        $<$<CXX_COMPILER_ID:GNU>:-fsanitize=undefined>
-    )
+target_compile_options( gravity PRIVATE -Wall -Wextra -Wpedantic -fconcepts )
+target_link_options( gravity PRIVATE )
 
-    set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
-    set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
-endif()
+set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
+set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-# add_executable( ${CMAKE_PROJECT_NAME} )
-# target_sources( ${CMAKE_PROJECT_NAME} PRIVATE main.cpp )
-# target_link_libraries( ${CMAKE_PROJECT_NAME} PUBLIC ${CONAN_LIBS} ${Threads} )
 target_sources( gravity PRIVATE src/main.cpp src/common.cpp src/gfx.cpp src/input.cpp )
-target_link_libraries( gravity PRIVATE ${CONAN_LIBS} ${Threads} -lSDL2_gfx )
+target_link_libraries( gravity PRIVATE ${CONAN_LIBS} ${Threads} -lSDL2_gfx -ltbb )
 
 target_include_directories( gravity PRIVATE ./include ./3rd_party/include/)

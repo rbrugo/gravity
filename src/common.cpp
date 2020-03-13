@@ -14,17 +14,17 @@ void dump(entt::registry & reg, std::optional<int> day)
 {
     auto const divisor = fmt::format("|{:-^113}|\n", "");
     if (day.has_value()) {
-        std::cout << divisor;
-        brun::print("|{:^113}|\n", fmt::format("DAY {}", *day));
+        fmt::print("{}", divisor);
+        fmt::print("|{:^113}|\n", fmt::format("DAY {}", *day));
     }
-    std::cout << divisor;
-    brun::print("|{:<10}|{:^20}|{:^40}|{:^40}|\n", "Obj name", "mass", "position", "velocity");
-    std::cout << divisor;
+    fmt::print("{}", divisor);
+    fmt::print("|{:<10}|{:^20}|{:^40}|{:^40}|\n", "Obj name", "mass", "position", "velocity");
+    fmt::print("{}", divisor);
     auto dump_single = [](auto const & tag, auto const mass, auto const position, auto const velocity) {
-        brun::print("|{:<10}|{:^20}|{:^40}|{:^40}|\n", tag, mass, position, velocity);
+        fmt::print("|{:<10}|{:^20}|{:^40}|{:^40}|\n", tag, mass, position, velocity);
     };
     reg.view<brun::tag, brun::mass, brun::position, brun::velocity>().each(dump_single);
-    std::cout << divisor << std::flush;
+    fmt::print("{}", divisor);
 }
 } // namespace brun
 
