@@ -4,20 +4,16 @@
  * @created     : Saturday Jan 11, 2020 17:08:18 CET
  */
 
+#include "common.hpp"                // for common utils - also includes entt, linear_algebra and units
 #include "input.hpp"                 // for "config" file related functions
-#include "common.hpp"                // for common utils
 #include "gfx.hpp"                   // graphics related functions
 
-#include <csignal>                   // signal handling
-#include <thread>                    // for multithreading
-#include <iostream>                  // terminal input-output
-#include <execution>
+#include <csignal>                   // signal handling    (std::signal)
+#include <thread>                    // for multithreading (std::thread, std::shared_mutex)
+#include <execution>                 // for parallelism    (std::execution::par_unseq)
 
-#include <fmt/format.h>              // formatting functions
-#include <fmt/chrono.h>
-
-#include <linear_algebra.hpp>        // vectors
-#include <entt/entt.hpp>             // entity component system - where the data is stored
+#include <fmt/format.h>              // formatting         (fmt::print, fmt::format)
+#include <fmt/chrono.h>              // compatibility with std::chrono
 
 #include <range/v3/view/iota.hpp>    // iota function for generating ranges of numbers
 
@@ -52,10 +48,6 @@ using brun::literals::operator""_Yg;
 // Compute a step of simulation with a time interval of `dt` (default: 1 day)
 void update(std::shared_mutex & mtx, entt::registry & reg, units::si::time<units::si::day> const dt = 1.q_d)
 {
-    // Where updated values are stored
-    auto updated = std::map<entt::entity, std::pair<brun::position, brun::velocity>>{};
-    auto updated_mtx = std::mutex{};
-
     //A list of objects which are movable
     auto movables = reg.group<brun::position, brun::velocity, brun::mass>();
     // A list of objects which can generate a g-field
@@ -64,6 +56,11 @@ void update(std::shared_mutex & mtx, entt::registry & reg, units::si::time<units
     // In reality, every object have a mass velocity, but in a planetary system the central star may be
     //  considered at rest (at the cost of a bit of accuracy)
     auto massives = reg.group<brun::position, brun::mass>();
+
+    // Where updated values are stored
+    struct data_node { entt::entity entity; brun::position pos; brun::velocity vel; };
+    auto updated = std::vector<data_node>{}; updated.reserve(movables.size());
+    auto updated_mtx = std::mutex{};
     std::for_each(std::execution::par_unseq, movables.begin(), movables.end(), [&](auto const target) {
         // Function needed to compute acceleration on a target object, given his current position
         auto compute_acceleration = [&massives, &reg](auto const target, auto const & position) mutable {
@@ -99,11 +96,10 @@ void update(std::shared_mutex & mtx, entt::registry & reg, units::si::time<units
         auto const v_fin = v0 + a_mid * dt;
 
         auto _ = std::lock_guard{updated_mtx};
-        updated.insert_or_assign(target, std::make_pair(r_fin, v_fin));
+        updated.push_back({target, r_fin, v_fin});
     });
     auto lock = std::shared_lock{mtx};  // Lock the registry so I can write in it safely (bc multithread)
-    for (auto const & [target, vectors] : updated) {
-        auto const & [position, velocity] = vectors;
+    for (auto const & [target, position, velocity] : updated) {
         reg.assign_or_replace<brun::position>(target, position);
         reg.assign_or_replace<brun::velocity>(target, velocity);
     }

@@ -19,6 +19,7 @@
 
 #include <entt/entt.hpp>
 
+#include <units/math.h>
 #include <units/physical/si/length.h>
 #include <units/physical/si/time.h>
 #include <units/physical/si/mass.h>
@@ -81,11 +82,9 @@ namespace brun
     auto norm(std::experimental::math::vector<ET, OT> const & v) noexcept
         -> typename std::experimental::math::vector<ET,OT>::value_type
     {
-        /* return units::sqrt(v * v); */ // TODO chech if it works with the new `units` version
         auto const sq_norm = v * v;
         if constexpr(not std::is_floating_point_v<typename std::decay<decltype(sq_norm)>::type>) {
-            auto const as_double = sq_norm.count();
-            return typename std::experimental::math::vector<ET,OT>::value_type{std::sqrt(as_double)};
+            return units::sqrt(v * v);
         } else {
             return typename std::experimental::math::vector<ET,OT>::value_type{std::sqrt(sq_norm)};
         }
