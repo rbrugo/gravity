@@ -46,8 +46,10 @@ using brun::literals::operator""_kmps;
 using brun::literals::operator""_Yg;
 
 // Compute a step of simulation with a time interval of `dt` (default: 1 day)
-void update(std::shared_mutex & mtx, entt::registry & reg, units::si::time<units::si::day> const dt = 1.q_d)
+void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_d)
 {
+    auto & reg = ctx.reg;
+    /* auto & mtx = ctx.reg_mtx; */
     //A list of objects which are movable
     auto movables = reg.group<brun::position, brun::velocity, brun::mass>();
     // A list of objects which can generate a g-field
@@ -98,7 +100,7 @@ void update(std::shared_mutex & mtx, entt::registry & reg, units::si::time<units
         auto _ = std::lock_guard{updated_mtx};
         updated.push_back({target, r_fin, v_fin});
     });
-    auto lock = std::shared_lock{mtx};  // Lock the registry so I can write in it safely (bc multithread)
+    auto lock = std::shared_lock{ctx};  // Lock the registry so I can write in it safely (bc multithread)
     for (auto const & [target, position, velocity] : updated) {
         reg.assign_or_replace<brun::position>(target, position);
         reg.assign_or_replace<brun::velocity>(target, velocity);
@@ -138,11 +140,10 @@ int main(int argc, char * argv[])
     auto const days_per_second = 1.q_d;  // Days to compute every second - may be selected runtime
     auto const days_per_millisecond = days_per_second / 1000;
 
-    auto registry = brun::load_data(filename); // Registry is loaded from file
-
-    auto mtx = std::shared_mutex{};
+    auto ctx = brun::context{};
+    auto & registry = ctx.reg = brun::load_data(filename); // Registry is loaded from file
     // Creates a thread dedicated to graphics rendering according to `fps`
-    auto worker = std::jthread{brun::render_cycle(mtx, renderer, registry, view_radius, fps)};
+    auto worker = std::jthread{brun::render_cycle(ctx, renderer, view_radius, fps)};
     // Computes the simulation from `first_dat` to `last_day` with a step of `dt` and a cap
     //  of `production_ratio` days each second
     auto accumulator = 24.q_h;
@@ -167,7 +168,7 @@ int main(int argc, char * argv[])
         do {
             auto const begin = std::chrono::steady_clock::now();
             for ([[maybe_unused]] auto _ : rvw::iota(0, n_steps)) {
-                update(mtx, registry, timestep);
+                update(ctx, timestep);
                 accumulator += timestep;
             }
             std::this_thread::sleep_until(begin + std::chrono::microseconds{900});
@@ -176,7 +177,7 @@ int main(int argc, char * argv[])
         auto const day_calc_end = std::chrono::steady_clock::now();
 
         {
-            auto const lock = std::scoped_lock{mtx};
+            auto const lock = std::scoped_lock{ctx};
 
             registry.view<brun::position, brun::trail>().each([](auto const & p, auto & t) {
                 t.push_front(p);

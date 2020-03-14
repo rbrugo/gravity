@@ -15,8 +15,14 @@
 namespace brun
 {
 
+namespace detail
+{
+    template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+    template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+} // namespace detail
+
 // Computes the system's center of mass
-auto center_of_mass(entt::registry & registry)
+auto center_of_mass(entt::registry const & registry)
     -> brun::position
 {
     using weighted_position = decltype(brun::position{} * brun::mass{});
@@ -31,20 +37,38 @@ auto center_of_mass(entt::registry & registry)
         auto const [pos, mass] = registry.get<brun::position, brun::mass>(entt);
         return pair{pos * mass, mass};
     };
-    auto objects = registry.view<brun::position, brun::mass>();
+    auto objects = registry.view<brun::position const, brun::mass const>();
     auto const [wpos, total_mass] = ::ranges::accumulate(objects, pair{}, pairwise_sum, pos);
     return 1./total_mass * wpos;
 }
 
+auto compute_origin(brun::context const & ctx)
+    -> brun::position
+{
+    auto const & follow = ctx.follow;
+    auto const & reg = ctx.reg;
+    return std::visit(detail::overloaded{
+        [](follow::nothing stay) {
+            return stay.last;
+        },
+        [&reg](follow::com) {
+            return center_of_mass(reg);
+        },
+        [&reg](follow::target target) {
+            return reg.get<brun::position>(target.id) + target.offset;
+        }
+    }, follow);
+}
+
 // Display every object whith a position, a color and a pixel radius
 void display(
-    std::shared_mutex & mtx, SDLpp::renderer & renderer, entt::registry & registry,
-    brun::position::value_type const view_radius)
+    brun::context const & ctx, SDLpp::renderer & renderer, brun::position::value_type const view_radius
+    )
 {
     namespace rvw = ::ranges::views;
+    auto const & registry = ctx.reg;
     auto const [_a, _b, w, h] = renderer.size(); // get width and height
-    auto const com = center_of_mass(registry);
-    auto compute_displacement = [&com](auto const & _1) { return _1 - com; }; // compute displacement from the com
+    auto const compute_displacement = [origin = compute_origin(ctx)](auto const & _1) { return _1 - origin; };
 
     // Rescale the vector such that the screen has "radius" 1.
     // FIXME this way one cannot see planets in the corner, outside of the circle
@@ -63,14 +87,14 @@ void display(
     //  will be in [0, 1] if it is contained into the screen, (1, +∞) otherwise.
     // Then we will discard every object whose rescaled displacement is greater than 1 and compute
     //  the graphics to display (the circle and the motion trail) for every survived object
-    auto entities  = registry.view<brun::position, SDLpp::color, brun::px_radius>();
+    auto entities  = registry.view<brun::position const, SDLpp::color const, brun::px_radius const>();
     auto const k = std::max(w, h) * 0.5;
     auto circles = std::vector<SDLpp::paint::circle>(); circles.reserve(registry.size());
-    auto lines   = std::vector<SDLpp::paint::line  >(); lines.reserve(registry.view<brun::trail>().size());
+    auto lines   = std::vector<SDLpp::paint::line  >(); lines.reserve(registry.view<brun::trail const>().size());
     for (auto const entt : entities) {
         auto const pos = registry.get<brun::position>(entt);
         auto const displacement = compute_displacement(pos);
-        auto const rescaled = rescale(pos);
+        auto const rescaled = rescale(displacement);
         if (brun::norm(rescaled) > k) {
             continue;
         }
@@ -113,7 +137,7 @@ void display(
     renderer.set_draw_color(SDLpp::colors::black);
     renderer.clear();
     {
-        auto lock = std::scoped_lock{mtx};  // Lock the data (for safety reasons in multithreading)
+        auto lock = std::scoped_lock{ctx.reg_mtx};  // Lock the data (for safety reasons in multithreading)
         ranges::for_each(lines,   &SDLpp::paint::line  ::display); // Draw motion trail first,
         ranges::for_each(circles, &SDLpp::paint::circle::display); //  then circles, on the "canvas"
     }
