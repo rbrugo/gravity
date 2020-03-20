@@ -38,13 +38,10 @@ namespace STD_LA
 {
     // Defining a way to print a vector onto the screen
     template <typename T, std::size_t N>
+    inline
     std::ostream & operator<<(std::ostream & out, STD_LA::fs_vector<T, N> const & v)
     {
-        out << '(' << std::setprecision(3) << *begin(v);
-        for (auto it = std::next(begin(v)), end_ = end(v); it != end_; ++it) {
-            out << ", " << std::setprecision(2) << *it;
-        }
-        out << ')';
+        out << fmt::format("({:%.3gQ}, {:%.3gQ}, {:%.3gQ}) {:%q}", v[0], v[1], v[2], v[2]);
         return out;
     }
 } // namespace STD_LA
