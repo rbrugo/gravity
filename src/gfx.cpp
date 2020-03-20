@@ -51,8 +51,8 @@ auto compute_origin(brun::context const & ctx)
         [](follow::nothing stay) {
             return stay.last;
         },
-        [&reg](follow::com) {
-            return center_of_mass(reg);
+        [&reg](follow::com com) {
+            return center_of_mass(reg) + com.offset;
         },
         [&reg](follow::target target) {
             return reg.get<brun::position>(target.id) + target.offset;

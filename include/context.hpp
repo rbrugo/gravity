@@ -20,7 +20,7 @@ namespace brun
 
 namespace follow
 {
-struct com{};
+struct com    { brun::position offset; };
 struct nothing{ brun::position last; };
 struct target {
     target(entt::entity const tg) : id{tg} {}
