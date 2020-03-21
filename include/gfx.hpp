@@ -36,25 +36,11 @@ auto center_of_mass(entt::registry & registry) -> brun::position;
 void display(brun::context const &, SDLpp::renderer &, brun::position::value_type const max_radius);
 
 // Generates a function which must be invoked in a thread, which refresh the graphics at a certain rate
-inline
-auto render_cycle(
-    brun::context const & ctx,
+void render_cycle(
+    brun::context & ctx,
     SDLpp::renderer & renderer,
     brun::position::value_type const & max_radius, units::si::frequency<units::si::hertz> const fps
-) noexcept
-{
-    using namespace units::si::literals;
-    auto const freq = fps * 1q_s / 1q_us;
-    auto const time_for_frame = std::chrono::microseconds{int((1./freq).count())}; // FIXME is this correct?
-    return [&ctx, &renderer, &max_radius, time_for_frame](std::stop_token token) mutable {
-        while (not token.stop_requested()) {
-            auto const end = std::chrono::system_clock::now() + time_for_frame;
-            display(ctx, renderer, max_radius);
-
-            std::this_thread::sleep_until(end);
-        }
-    };
-}
+) noexcept;
 
 } // namespace brun
 

@@ -8,6 +8,7 @@
 #include "input.hpp"                 // for "config" file related functions
 #include "gfx.hpp"                   // graphics related functions
 #include "cli.hpp"                   // for `parse_cli` function (uses Lyra)
+#include "keyboard.hpp"              // keyboard handling
 
 #include <csignal>                   // signal handling    (std::signal)
 #include <thread>                    // for multithreading (std::thread, std::shared_mutex)
@@ -106,6 +107,73 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
     }
 }
 
+void simulation(brun::context & ctx, units::si::time<units::si::day> const days_per_second)
+{
+    auto & registry = ctx.reg;
+    // Some config params - some will be configurable from the config file in the future
+    /// const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
+    constexpr auto first_day = 1;
+    constexpr auto last_day = 365;
+    /// auto const fps = units::si::frequency<units::si::hertz>{60};
+    constexpr auto dt = 10.q_min;        // Maximum of the simulation
+
+    /// auto const days_per_second = 1.q_d;  // Days to compute every second - may be selected runtime
+    auto const days_per_millisecond = days_per_second / 1000;
+
+    // Computes the simulation from `first_dat` to `last_day` with a step of `dt` and a cap
+    //  of `production_ratio` days each second
+    auto accumulator = 24.q_h;
+    // Timestep calculation for better accuracy
+    // Each ms must be computed the simulation for          Δt := days_per_millisecond
+    //  in small steps of size                              dt := dt
+    //  so an idea is to compute                            n  := floor(Δt/dt) = floor(η)
+    //  steps of simulation with duration dt each ms.
+    // But Δt < dt: in those cases, η < 1 => n = 0.
+    // It's better to define a new quantity dτ such that    η·dt = (n+1)·dτ
+    // So we will use                                       dτ := dt·η/(n+1)
+    //  and will make `n+1` steps of simulation with duration dτ each.
+    auto const ratio = days_per_millisecond / dt;
+    auto const n_steps = std::floor(ratio) + 1;
+    auto const timestep = dt * ratio / n_steps;
+    auto const total_calc_begin = std::chrono::steady_clock::now();
+    fmt::print(stderr, "Δt: {}\ndt: {}\ntimestep: {}\n", days_per_millisecond, dt, timestep);
+
+    ctx.status.store(brun::status::running);
+    for (auto const day : rvw::iota(first_day, last_day)) {
+        accumulator -= 24.q_h;
+        brun::dump(registry, day);  // Once a day, dumps data on terminal
+        if (ctx.status.load() == brun::status::stopped) {
+            fmt::print(stderr, "Simulation stopped\n");
+            return;
+        }
+        auto const day_calc_begin = std::chrono::steady_clock::now();
+        do {
+            auto const begin = std::chrono::steady_clock::now();
+            for ([[maybe_unused]] auto _ : rvw::iota(0, n_steps)) {
+                update(ctx, timestep);
+                accumulator += timestep;
+            }
+            std::this_thread::sleep_until(begin + std::chrono::microseconds{900});
+
+        } while (accumulator < 24.q_h);
+        auto const day_calc_end = std::chrono::steady_clock::now();
+
+        {
+            auto const lock = std::scoped_lock{ctx};
+
+            registry.view<brun::position, brun::trail>().each([](auto const & p, auto & t) {
+                t.push_front(p);
+                t.pop_back();
+            });
+        }
+        auto const day_calc_time = (day_calc_end - day_calc_begin);
+        auto const avg_calc_time = (day_calc_end - total_calc_begin)/(day - first_day + 1);
+        fmt::print("This day calc time: {}\nAverage simulation rate: {}\n", day_calc_time, avg_calc_time);
+    }
+    ctx.status.store(brun::status::stopped);
+    brun::dump(registry, last_day);
+}
+
 // The program entry point
 int main(int argc, char const * argv[])
 {
@@ -138,66 +206,18 @@ int main(int argc, char const * argv[])
     }
     renderer.set_draw_color(SDLpp::colors::black);
 
-    // Some config params - some will be configurable from the config file in the future
-    /// const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
-    constexpr auto first_day = 1;
-    constexpr auto last_day = 365;
-    /// auto const fps = units::si::frequency<units::si::hertz>{60};
-    constexpr auto dt = 10.q_min;        // Maximum of the simulation
-
-    /// auto const days_per_second = 1.q_d;  // Days to compute every second - may be selected runtime
-    auto const days_per_millisecond = days_per_second / 1000;
-
     auto ctx = brun::context{};
-    auto & registry = ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
+    ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
+    // Creates a thread dedicated to simulation
+    auto worker = std::async(std::launch::async, simulation, std::ref(ctx), days_per_second);
+    // Creates a thread dedicated to keyboard input
+    auto keyboard = std::async(std::launch::async, brun::keyboard_cycle, std::ref(ctx));
     // Creates a thread dedicated to graphics rendering according to `fps`
-    auto worker = std::jthread{brun::render_cycle(ctx, renderer, view_radius, fps)};
-    // Computes the simulation from `first_dat` to `last_day` with a step of `dt` and a cap
-    //  of `production_ratio` days each second
-    auto accumulator = 24.q_h;
-    // Timestep calculation for better accuracy
-    // Each ms must be computed the simulation for          Δt := days_per_millisecond
-    //  in small steps of size                              dt := dt
-    //  so an idea is to compute                            n  := floor(Δt/dt) = floor(η)
-    //  steps of simulation with duration dt each ms.
-    // But Δt < dt: in those cases, η < 1 => n = 0.
-    // It's better to define a new quantity dτ such that    η·dt = (n+1)·dτ
-    // So we will use                                       dτ := dt·η/(n+1)
-    //  and will make `n+1` steps of simulation with duration dτ each.
-    auto const ratio = days_per_millisecond / dt;
-    auto const n_steps = std::floor(ratio) + 1;
-    auto const timestep = dt * ratio / n_steps;
-    auto const total_calc_begin = std::chrono::steady_clock::now();
-    fmt::print(stderr, "Δt: {}\ndt: {}\ntimestep: {}\n", days_per_millisecond, dt, timestep);
-    for (auto const day : rvw::iota(first_day, last_day)) {
-        accumulator -= 24.q_h;
-        brun::dump(registry, day);  // Once a day, dumps data on terminal
-        auto const day_calc_begin = std::chrono::steady_clock::now();
-        do {
-            auto const begin = std::chrono::steady_clock::now();
-            for ([[maybe_unused]] auto _ : rvw::iota(0, n_steps)) {
-                update(ctx, timestep);
-                accumulator += timestep;
-            }
-            std::this_thread::sleep_until(begin + std::chrono::microseconds{900});
+    auto graphics = std::async(std::launch::async, brun::render_cycle2, std::ref(ctx), std::ref(renderer), view_radius, fps);
 
-        } while (accumulator < 24.q_h);
-        auto const day_calc_end = std::chrono::steady_clock::now();
-
-        {
-            auto const lock = std::scoped_lock{ctx};
-
-            registry.view<brun::position, brun::trail>().each([](auto const & p, auto & t) {
-                t.push_front(p);
-                t.pop_back();
-            });
-        }
-        auto const day_calc_time = (day_calc_end - day_calc_begin);
-        auto const avg_calc_time = (day_calc_end - total_calc_begin)/(day - first_day + 1);
-        fmt::print("This day calc time: {}\nAverage simulation rate: {}\n", day_calc_time, avg_calc_time);
-    }
-    brun::dump(registry, last_day);
-    [[maybe_unused]] auto const stopped = worker.request_stop();
+    worker.get();
+    keyboard.get();
+    graphics.get();
 
     return 0;
 }

@@ -47,9 +47,10 @@ auto compute_origin(brun::context const & ctx)
 {
     auto const & follow = ctx.follow;
     auto const & reg = ctx.reg;
+    auto lock = std::scoped_lock{ctx};  // Lock the data (for safety reasons in multithreading)
     return std::visit(detail::overloaded{
         [](follow::nothing stay) {
-            return stay.last;
+            return stay.offset;
         },
         [&reg](follow::com com) {
             return center_of_mass(reg) + com.offset;
@@ -142,6 +143,30 @@ void display(
         ranges::for_each(circles, &SDLpp::paint::circle::display); //  then circles, on the "canvas"
     }
     renderer.present(); // Display the canvas
+}
+
+
+void render_cycle(
+    brun::context & ctx,
+    SDLpp::renderer & renderer,
+    brun::position::value_type const & max_radius, units::si::frequency<units::si::hertz> const fps
+) noexcept
+{
+    using namespace units::si::literals;
+    auto const freq = fps * 1q_s / 1q_us;
+    auto const time_for_frame = std::chrono::microseconds{int((1./freq).count())}; // FIXME is this correct?
+    /* return [&ctx, &renderer, &max_radius, time_for_frame](std::stop_token token) mutable { */
+    while (ctx.status.load() == brun::status::starting) {
+        std::this_thread::yield();
+    }
+    while (ctx.status.load() == brun::status::running) {
+    /* while (not token.stop_requested()) { */
+        auto const end = std::chrono::system_clock::now() + time_for_frame;
+        display(ctx, renderer, max_radius);
+
+        std::this_thread::sleep_until(end);
+    }
+    /* }; */
 }
 
 } // namespace brun
