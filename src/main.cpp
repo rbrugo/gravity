@@ -7,6 +7,7 @@
 #include "common.hpp"                // for common utils - also includes entt, linear_algebra and units
 #include "input.hpp"                 // for "config" file related functions
 #include "gfx.hpp"                   // graphics related functions
+#include "cli.hpp"                   // for `parse_cli` function (uses Lyra)
 
 #include <csignal>                   // signal handling    (std::signal)
 #include <thread>                    // for multithreading (std::thread, std::shared_mutex)
@@ -25,7 +26,6 @@ namespace brun
 {
     inline namespace constants
     {
-        constexpr auto c = 299792458q_mps;
         template <
             typename Length = units::si::length<units::si::metre>,
             typename Mass   = units::si::mass<units::si::kilogram>,
@@ -49,7 +49,6 @@ using brun::literals::operator""_Yg;
 void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_d)
 {
     auto & reg = ctx.reg;
-    /* auto & mtx = ctx.reg_mtx; */
     //A list of objects which are movable
     auto movables = reg.group<brun::position, brun::velocity, brun::mass>();
     // A list of objects which can generate a g-field
@@ -108,10 +107,19 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
 }
 
 // The program entry point
-int main(int argc, char * argv[])
+int main(int argc, char const * argv[])
 {
-    // Take the config file from command line (or the default one)
-    auto const filename = argc > 1 ? std::string{argv[1]} : std::string{"../planets.toml"};
+    // Takes command line arguments
+    auto const & res = brun::parse_cli(argc, argv);
+    if (not res) {
+        if (not res.error().empty()) {
+            fmt::print(stderr, "Error in parsing command line arguments: {}\n", res.error());
+            std::exit(1);
+        }
+        std::exit(0);
+    }
+    auto const [days_per_second, fps, view_radius, filename] = *res;
+    fmt::print("dps: {}\nfps: {}\nview radius: {}\nfilename: {}\n", days_per_second, fps, view_radius, filename);
     std::signal(SIGINT, &std::exit);
 
     // Init graphics
@@ -131,17 +139,17 @@ int main(int argc, char * argv[])
     renderer.set_draw_color(SDLpp::colors::black);
 
     // Some config params - some will be configurable from the config file in the future
-    const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
+    /// const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
     constexpr auto first_day = 1;
-    constexpr auto last_day = 365 / 12;  // For testing purpose
-    constexpr auto fps = units::si::frequency<units::si::hertz>{60};
+    constexpr auto last_day = 365;
+    /// auto const fps = units::si::frequency<units::si::hertz>{60};
     constexpr auto dt = 10.q_min;        // Maximum of the simulation
 
-    auto const days_per_second = 1.q_d;  // Days to compute every second - may be selected runtime
+    /// auto const days_per_second = 1.q_d;  // Days to compute every second - may be selected runtime
     auto const days_per_millisecond = days_per_second / 1000;
 
     auto ctx = brun::context{};
-    auto & registry = ctx.reg = brun::load_data(filename); // Registry is loaded from file
+    auto & registry = ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
     // Creates a thread dedicated to graphics rendering according to `fps`
     auto worker = std::jthread{brun::render_cycle(ctx, renderer, view_radius, fps)};
     // Computes the simulation from `first_dat` to `last_day` with a step of `dt` and a cap
