@@ -158,14 +158,6 @@ void simulation(brun::context & ctx, units::si::time<units::si::day> const days_
         } while (accumulator < 24.q_h);
         auto const day_calc_end = std::chrono::steady_clock::now();
 
-        {
-            auto const lock = std::scoped_lock{ctx};
-
-            registry.view<brun::position, brun::trail>().each([](auto const & p, auto & t) {
-                t.push_front(p);
-                t.pop_back();
-            });
-        }
         auto const day_calc_time = (day_calc_end - day_calc_begin);
         auto const avg_calc_time = (day_calc_end - total_calc_begin)/(day - first_day + 1);
         fmt::print("This day calc time: {}\nAverage simulation rate: {}\n", day_calc_time, avg_calc_time);
