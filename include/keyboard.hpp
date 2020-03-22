@@ -31,7 +31,8 @@ auto keyboard_cycle(brun::context & ctx)
         std::this_thread::yield();
     }
     while (ctx.status.load() == brun::status::running) {
-        auto displacement = brun::position{};
+        auto displacement      = brun::position{};
+        auto delta_view_radius = brun::position_scalar{};
         for (auto const event : SDLpp::event_range) {
             auto const input = SDLpp::match(event,
                  [](SDLpp::event_category::quit) { return +'q'; },
@@ -49,16 +50,24 @@ auto keyboard_cycle(brun::context & ctx)
                 ctx.status.store(brun::status::stopped);
                 break;
             case SDLK_LEFT:
-                displacement = displacement + brun::position{-1._Gm, 0._Gm, 0._Gm};
-                break;
-            case SDLK_RIGHT:
                 displacement = displacement + brun::position{+1._Gm, 0._Gm, 0._Gm};
                 break;
+            case SDLK_RIGHT:
+                displacement = displacement + brun::position{-1._Gm, 0._Gm, 0._Gm};
+                break;
             case SDLK_UP:
-                displacement = displacement + brun::position{0._Gm, +1._Gm, 0._Gm};
+                displacement = displacement + brun::position{0._Gm, -1._Gm, 0._Gm};
                 break;
             case SDLK_DOWN:
-                displacement = displacement + brun::position{0._Gm, -1._Gm, 0._Gm};
+                displacement = displacement + brun::position{0._Gm, +1._Gm, 0._Gm};
+                break;
+            case '+':
+            case SDLK_KP_PLUS:
+                delta_view_radius -= 10._Gm;
+                break;
+            case '-':
+            case SDLK_KP_MINUS:
+                delta_view_radius += 10._Gm;
                 break;
             default:
                 break;
@@ -66,6 +75,10 @@ auto keyboard_cycle(brun::context & ctx)
             if (std::any_of(begin(displacement), end(displacement), [](auto x) { return x != 0._Gm; })) {
                 auto lock = std::scoped_lock{ctx};
                 std::visit([&displacement](auto & follow) { follow.offset = follow.offset + displacement; }, ctx.follow);
+            }
+            if (delta_view_radius != brun::position_scalar{}) {
+                auto lock = std::scoped_lock{ctx};
+                ctx.view_radius += delta_view_radius;
             }
         }
         std::this_thread::sleep_for(input_delay);

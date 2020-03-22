@@ -44,6 +44,7 @@ enum class status : int8_t
 struct context
 {
     std::atomic<brun::status> status = status::starting;
+    brun::position_scalar view_radius;
     entt::registry reg;
     follow_t follow;
 private:
