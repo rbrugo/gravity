@@ -47,7 +47,7 @@ auto compute_origin(brun::context const & ctx)
 {
     auto const & follow = ctx.follow;
     auto const & reg = ctx.reg;
-    auto lock = std::scoped_lock{ctx};  // Lock the data (for safety reasons in multithreading)
+    auto lock = std::shared_lock{ctx};  // Lock the data (for safety reasons in multithreading)
     return std::visit(detail::overloaded{
         [](follow::nothing stay) {
             return stay.offset;
@@ -138,7 +138,7 @@ void display(
     renderer.set_draw_color(SDLpp::colors::black);
     renderer.clear();
     {
-        auto lock = std::scoped_lock{ctx.reg_mtx};  // Lock the data (for safety reasons in multithreading)
+        auto lock = std::shared_lock{ctx};  // Lock the data (for safety reasons in multithreading)
         ranges::for_each(lines,   &SDLpp::paint::line  ::display); // Draw motion trail first,
         ranges::for_each(circles, &SDLpp::paint::circle::display); //  then circles, on the "canvas"
     }

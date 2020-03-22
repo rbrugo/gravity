@@ -100,7 +100,7 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
         auto _ = std::lock_guard{updated_mtx};
         updated.push_back({target, r_fin, v_fin});
     });
-    auto lock = std::shared_lock{ctx};  // Lock the registry so I can write in it safely (bc multithread)
+    auto lock = std::scoped_lock{ctx};  // Lock the registry so I can write in it safely (bc multithread)
     for (auto const & [target, position, velocity] : updated) {
         reg.assign_or_replace<brun::position>(target, position);
         reg.assign_or_replace<brun::velocity>(target, velocity);
@@ -213,7 +213,7 @@ int main(int argc, char const * argv[])
     // Creates a thread dedicated to keyboard input
     auto keyboard = std::async(std::launch::async, brun::keyboard_cycle, std::ref(ctx));
     // Creates a thread dedicated to graphics rendering according to `fps`
-    auto graphics = std::async(std::launch::async, brun::render_cycle2, std::ref(ctx), std::ref(renderer), view_radius, fps);
+    auto graphics = std::async(std::launch::async, brun::render_cycle, std::ref(ctx), std::ref(renderer), view_radius, fps);
 
     worker.get();
     keyboard.get();
