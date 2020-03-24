@@ -35,7 +35,7 @@ set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsan
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-target_sources( gravity PRIVATE src/main.cpp src/common.cpp src/gfx.cpp src/input.cpp src/cli.cpp )
+target_sources( gravity PRIVATE src/main.cpp src/common.cpp src/gfx.cpp src/config.cpp src/cli.cpp src/simulation.cpp )
 target_link_libraries( gravity PRIVATE ${CONAN_LIBS} ${Threads} -lSDL2_gfx -ltbb )
 
 target_include_directories( gravity PRIVATE ./include ./3rd_party/include/)
