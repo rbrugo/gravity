@@ -6,13 +6,13 @@
 
 #include "common.hpp"                // for common utils - also includes entt, linear_algebra and units
 #include "simulation.hpp"
-#include "config.hpp"                 // for "config" file related functions
+#include "config.hpp"                // for "config" file related functions
 #include "gfx.hpp"                   // graphics related functions
 #include "cli.hpp"                   // for `parse_cli` function (uses Lyra)
 #include "keyboard.hpp"              // keyboard handling
 
 #include <csignal>                   // signal handling    (std::signal)
-#include <thread>                    // for multithreading (std::thread, std::async)
+#include <thread>                    // for multithreading (std::threadG
 
 #include <fmt/format.h>              // formatting         (fmt::print, fmt::format)
 
@@ -52,15 +52,15 @@ int main(int argc, char const * argv[])
     ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
     ctx.view_radius = view_radius;
     // Creates a thread dedicated to simulation
-    auto worker = std::async(std::launch::async, brun::simulation, std::ref(ctx), days_per_second);
+    auto worker = std::thread{brun::simulation, std::ref(ctx), days_per_second};
     // Creates a thread dedicated to keyboard input
-    auto keyboard = std::async(std::launch::async, brun::keyboard_cycle, std::ref(ctx));
+    auto keyboard = std::thread{brun::keyboard_cycle, std::ref(ctx)};
     // Creates a thread dedicated to graphics rendering according to `fps`
-    auto graphics = std::async(std::launch::async, brun::render_cycle, std::ref(ctx), std::ref(renderer), fps);
+    auto graphics = std::thread{brun::render_cycle, std::ref(ctx), std::ref(renderer), fps};
 
-    worker.get();
-    keyboard.get();
-    graphics.get();
+    worker.join();
+    keyboard.join();
+    graphics.join();
 
     return 0;
 }
