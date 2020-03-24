@@ -13,9 +13,7 @@ namespace brun
 // Dump a formatted table on the terminal
 void dump(entt::registry & reg, std::optional<int> day)
 {
-/* "╣╠╝╚║═╗"" */
     auto const divisor = fmt::format("|{:-^113}|\n", "");
-    /* auto const divisor = fmt::format("╠{:{}^113}╣\n", "", "═"); */
 
     if (day.has_value()) {
         fmt::print(divisor);

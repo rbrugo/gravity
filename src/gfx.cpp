@@ -61,13 +61,21 @@ auto compute_origin(brun::context const & ctx)
     }, follow);
 }
 
+template <typename ...Components>
+inline
+auto ts_get(brun::context const & ctx, auto entt)
+{
+    return std::shared_lock{ctx}, ctx.reg.get<Components...>(entt);
+}
 // Display every object whith a position, a color and a pixel radius
 void display(
-    brun::context const & ctx, SDLpp::renderer & renderer, brun::position::value_type const view_radius
+    brun::context const & ctx, SDLpp::renderer & renderer
     )
 {
     namespace rvw = ::ranges::views;
     auto const & registry = ctx.reg;
+/* brun::position::value_type const view_radius */
+    auto const view_radius = [&ctx]{ return std::shared_lock{ctx}, ctx.view_radius; }();
     auto const [_a, _b, w, h] = renderer.size(); // get width and height
     auto const compute_displacement = [origin = compute_origin(ctx)](auto const & _1) { return _1 - origin; };
 
@@ -93,14 +101,15 @@ void display(
     auto circles = std::vector<SDLpp::paint::circle>(); circles.reserve(registry.size());
     auto lines   = std::vector<SDLpp::paint::line  >(); lines.reserve(registry.view<brun::trail const>().size());
     for (auto const entt : entities) {
-        auto const pos = registry.get<brun::position>(entt);
+        /* auto const pos = [&ctx, &registry, entt]{ return std::shared_lock{ctx}, registry.get<brun::position>(entt);}(); */
+        auto const pos = ts_get<brun::position>(ctx, entt);
         auto const displacement = compute_displacement(pos);
         auto const rescaled = rescale(displacement);
         if (brun::norm(rescaled) > k) {
             continue;
         }
 
-        auto const [color, rad] = registry.get<SDLpp::color, brun::px_radius>(entt);
+        auto const [color, rad] = ts_get<SDLpp::color, brun::px_radius>(ctx, entt);
         auto const circle = to_circle(rescaled, color, rad);
         circles.push_back(circle);
 
@@ -159,7 +168,7 @@ void update_trail(brun::context & ctx)
 void render_cycle(
     brun::context & ctx,
     SDLpp::renderer & renderer,
-    brun::position::value_type const & max_radius, units::si::frequency<units::si::hertz> const fps
+    units::si::frequency<units::si::hertz> const fps
 ) noexcept
 {
     using namespace units::si::literals;
@@ -172,7 +181,7 @@ void render_cycle(
     while (ctx.status.load() == brun::status::running) {
         auto const end = std::chrono::system_clock::now() + time_for_frame;
         if (++count == fps.count() / 10) {update_trail(ctx); count = 0;}
-        display(ctx, renderer, max_radius);
+        display(ctx, renderer);
 
         std::this_thread::sleep_until(end);
     }

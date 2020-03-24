@@ -39,7 +39,7 @@ namespace brun
             typename Force  = units::si::force<units::si::newton>
         > constexpr inline
         auto G = G_type<Length, Mass, Force>{G_type<>{6.67e-11}};
-    }
+    } // namespace constants
 } // namespace brun
 
 using brun::literals::operator""_Gm;
@@ -200,12 +200,13 @@ int main(int argc, char const * argv[])
 
     auto ctx = brun::context{};
     ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
+    ctx.view_radius = view_radius;
     // Creates a thread dedicated to simulation
     auto worker = std::async(std::launch::async, simulation, std::ref(ctx), days_per_second);
     // Creates a thread dedicated to keyboard input
     auto keyboard = std::async(std::launch::async, brun::keyboard_cycle, std::ref(ctx));
     // Creates a thread dedicated to graphics rendering according to `fps`
-    auto graphics = std::async(std::launch::async, brun::render_cycle, std::ref(ctx), std::ref(renderer), view_radius, fps);
+    auto graphics = std::async(std::launch::async, brun::render_cycle, std::ref(ctx), std::ref(renderer), fps);
 
     worker.get();
     keyboard.get();

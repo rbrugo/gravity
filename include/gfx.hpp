@@ -39,7 +39,7 @@ void display(brun::context const &, SDLpp::renderer &, brun::position::value_typ
 void render_cycle(
     brun::context & ctx,
     SDLpp::renderer & renderer,
-    brun::position::value_type const & max_radius, units::si::frequency<units::si::hertz> const fps
+    units::si::frequency<units::si::hertz> const fps
 ) noexcept;
 
 } // namespace brun
