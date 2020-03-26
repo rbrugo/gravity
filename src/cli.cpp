@@ -15,13 +15,13 @@ auto brun::parse_cli(int argc, char const * argv[])
     int fps = 60;
     double view_radius = 1.1 * std::sqrt(2) * 149.6;//11403.3;
     std::string filename;
-    /* auto params = simulation_params{}; */
+
     auto cli = lyra::help(show_help)
              | lyra::arg(filename, "dataset path")("path to the dataset")
              | lyra::opt(days_per_second, "days per second")["-d"]["--dps"]["--days-per-second"]
                         ("How many days must be simulated each second")
              | lyra::opt(fps, "framerate")["-f"]["--fps"]["--framerate"]
-                        ("Graphics framerate")
+                        ("Graphics framerate -- 0 to disable graphics")
              | lyra::opt(view_radius, "view radius")["-r"]["--radius"]
                         ("Default view radius")
              ;

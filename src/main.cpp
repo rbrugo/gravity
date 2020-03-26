@@ -40,11 +40,14 @@ int main(int argc, char const * argv[])
     // Creates a thread dedicated to keyboard input
     auto keyboard = std::thread{brun::keyboard_cycle, std::ref(ctx)};
     // Creates a thread dedicated to graphics rendering according to `fps`
-    auto graphics = std::thread{brun::render_cycle, std::ref(ctx), /*std::ref(renderer),*/ fps};
+    auto graphics = fps.count() > 0
+                  ? std::thread{brun::render_cycle, std::ref(ctx), fps}
+                  : std::thread{};
 
-    worker.join();
+    if (graphics.joinable())
+        graphics.join();
     keyboard.join();
-    graphics.join();
+    worker.join();
 
     return 0;
 }
