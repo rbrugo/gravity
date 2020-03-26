@@ -13,21 +13,13 @@
 
 #include <entt/fwd.hpp>
 
-#include <SDLpp/system_manager.hpp>
 #include <SDLpp/texture.hpp>
-#include <SDLpp/window.hpp>
-#include <SDLpp/event.hpp>
-#include <SDLpp/paint/shapes.hpp>
 
 #include <units/physical/si/time.h>
 #include <units/physical/si/frequency.h>
 
 #include "common.hpp"
 #include "context.hpp"
-
-#ifndef __cpp_lib_jthread
-#   include <jthread.hpp>
-#endif // __cpp_lib_jthread
 
 namespace brun
 {
@@ -38,7 +30,6 @@ void display(brun::context const &, SDLpp::renderer &, brun::position::value_typ
 // Generates a function which must be invoked in a thread, which refresh the graphics at a certain rate
 void render_cycle(
     brun::context & ctx,
-    SDLpp::renderer & renderer,
     units::si::frequency<units::si::hertz> const fps
 ) noexcept;
 

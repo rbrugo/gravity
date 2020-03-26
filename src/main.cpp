@@ -32,22 +32,6 @@ int main(int argc, char const * argv[])
     fmt::print("dps: {}\nfps: {}\nview radius: {}\nfilename: {}\n", days_per_second, fps, view_radius, filename);
     std::signal(SIGINT, &std::exit);
 
-    // Init graphics
-    auto mgr = SDLpp::system_manager{SDLpp::flag::init::everything};
-    if (not mgr) {
-        fmt::print(stderr, "Cannot init SDL: {} | {}\n",
-                    std::string{SDL_GetError()}, std::string{IMG_GetError()});
-        return 2;
-    }
-
-    auto window = SDLpp::window{"solar system", {1200, 900}};
-    auto renderer = SDLpp::renderer{window, SDLpp::flag::renderer::accelerated};
-    if (not renderer) {
-        fmt::print(stderr, "Cannot create the renderer: {}\n", SDL_GetError());
-        std::exit(1);
-    }
-    renderer.set_draw_color(SDLpp::colors::black);
-
     auto ctx = brun::context{};
     ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
     ctx.view_radius = view_radius;
@@ -56,7 +40,7 @@ int main(int argc, char const * argv[])
     // Creates a thread dedicated to keyboard input
     auto keyboard = std::thread{brun::keyboard_cycle, std::ref(ctx)};
     // Creates a thread dedicated to graphics rendering according to `fps`
-    auto graphics = std::thread{brun::render_cycle, std::ref(ctx), std::ref(renderer), fps};
+    auto graphics = std::thread{brun::render_cycle, std::ref(ctx), /*std::ref(renderer),*/ fps};
 
     worker.join();
     keyboard.join();

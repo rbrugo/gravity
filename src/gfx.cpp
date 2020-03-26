@@ -7,10 +7,18 @@
 
 #include "gfx.hpp"
 
+#include <mutex>
+
 #include <range/v3/action/push_back.hpp>
 #include <range/v3/algorithm.hpp>
 #include <range/v3/numeric.hpp>
 #include <range/v3/view.hpp>
+
+#include <SDLpp/system_manager.hpp>
+#include <SDLpp/texture.hpp>
+#include <SDLpp/window.hpp>
+#include <SDLpp/event.hpp>
+#include <SDLpp/paint/shapes.hpp>
 
 namespace brun
 {
@@ -74,7 +82,6 @@ void display(
 {
     namespace rvw = ::ranges::views;
     auto const & registry = ctx.reg;
-/* brun::position::value_type const view_radius */
     auto const view_radius = [&ctx]{ return std::shared_lock{ctx}, ctx.view_radius; }();
     auto const [_a, _b, w, h] = renderer.size(); // get width and height
     auto const compute_displacement = [origin = compute_origin(ctx)](auto const & _1) { return _1 - origin; };
@@ -101,7 +108,6 @@ void display(
     auto circles = std::vector<SDLpp::paint::circle>(); circles.reserve(registry.size());
     auto lines   = std::vector<SDLpp::paint::line  >(); lines.reserve(registry.view<brun::trail const>().size());
     for (auto const entt : entities) {
-        /* auto const pos = [&ctx, &registry, entt]{ return std::shared_lock{ctx}, registry.get<brun::position>(entt);}(); */
         auto const pos = ts_get<brun::position>(ctx, entt);
         auto const displacement = compute_displacement(pos);
         auto const rescaled = rescale(displacement);
@@ -167,13 +173,31 @@ void update_trail(brun::context & ctx)
 
 void render_cycle(
     brun::context & ctx,
-    SDLpp::renderer & renderer,
     units::si::frequency<units::si::hertz> const fps
 ) noexcept
 {
     using namespace units::si::literals;
     auto const freq = fps * 1q_s / 1q_us;
     auto const time_for_frame = std::chrono::microseconds{int((1./freq).count())}; // FIXME is this correct?
+
+
+    // Init graphics
+    auto mgr = SDLpp::system_manager{SDLpp::flag::init::everything};
+    if (not mgr) {
+        fmt::print(stderr, "Cannot init SDL: {} | {}\n",
+                    std::string{SDL_GetError()}, std::string{IMG_GetError()});
+        return;
+    }
+
+    auto window = SDLpp::window{"solar system", {1200, 900}};
+    auto renderer = SDLpp::renderer{window, SDLpp::flag::renderer::accelerated};
+    if (not renderer) {
+        fmt::print(stderr, "Cannot create the renderer: {}\n", SDL_GetError());
+        std::exit(1);
+    }
+    renderer.set_draw_color(SDLpp::colors::black);
+
+
     while (ctx.status.load() == brun::status::starting) {
         std::this_thread::yield();
     }
