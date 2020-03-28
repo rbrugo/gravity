@@ -4,7 +4,10 @@ cmake_minimum_required(VERSION 3.16.2)
 project( gravity
          VERSION 0.1
          DESCRIPTION " ")
-# set(CMAKE_CXX_STANDARD 17)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
 add_executable( gravity )
 target_compile_features( gravity PUBLIC cxx_std_20 )
 find_package(Threads REQUIRED)
@@ -32,10 +35,7 @@ target_link_options( gravity PRIVATE )
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-
-target_sources( gravity PRIVATE src/main.cpp src/common.cpp src/gfx.cpp src/config.cpp src/cli.cpp src/simulation.cpp )
-target_link_libraries( gravity PRIVATE ${CONAN_LIBS} ${Threads} -lSDL2_gfx -ltbb )
+target_sources( gravity PRIVATE src/main.cpp src/common.cpp src/gfx.cpp src/config.cpp src/cli.cpp src/simulation.cpp 3rd_party/src/imgui_impl_opengl3.cpp 3rd_party/src/imgui_impl_sdl.cpp )
+target_link_libraries( gravity PRIVATE -lGL -lGLEW ${CONAN_LIBS} ${Threads} -lSDL2_gfx -ltbb )
 
 target_include_directories( gravity PRIVATE ./include ./3rd_party/include/)

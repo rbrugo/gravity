@@ -1,4 +1,5 @@
 [requires]
+imgui/1.75
 sdl2/2.0.10@bincrafters/stable
 range-v3/0.10.0@ericniebler/stable
 fmt/6.1.2
