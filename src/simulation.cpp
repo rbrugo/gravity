@@ -58,7 +58,11 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
                 auto const distance  = position - reg.get<brun::position>(other);
                 auto const unit      = brun::unit(distance);
                 auto const mass      = reg.get<brun::mass>(other);
-                auto const res       = (mass / (distance * distance)) * brun::unit(distance);
+                // Workaround for ambiguous overload resolution
+                /* auto const res       = (mass / (distance * distance)) * brun::unit(distance); */
+                auto const res       = std::experimental::math::operator*(
+                    mass / (distance * distance), brun::unit(distance)
+                );
                 accumulator = accumulator + res;
             }
             return - G * accumulator;

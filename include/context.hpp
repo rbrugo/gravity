@@ -50,6 +50,7 @@ struct context
 private:
     mutable std::shared_mutex ctx_mtx;
 
+public:
     inline void lock()     const noexcept { ctx_mtx.lock();   }
     inline bool try_lock() const noexcept { return ctx_mtx.try_lock(); }
     inline void unlock()   const noexcept { ctx_mtx.unlock(); }
