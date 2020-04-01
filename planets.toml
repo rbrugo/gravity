@@ -36,8 +36,6 @@
 [[object]]
     name = "mercury"
     mass = 330.11
-    # distance = 57.9
-    # orbital_velocity = 47.4
     distance = 46.00
     orbital_velocity = 58.98
 
@@ -48,17 +46,12 @@
 [[object]]
     name = "venus"
     mass = 4867.5
-    # distance = 108.2
-    # orbital_velocity = 35.0
     distance = 107.48
     orbital_velocity = 35.26
     color = 0xC1792E
 
 [[object]]
     name = "earth"
-    # mass =  5974.2
-    # distance = 149.6
-    # orbital_velocity = 29.8
     mass =  5972.3
     distance = 147.9
     orbital_velocity = 30.29
@@ -68,7 +61,6 @@
     [[object.satellites]]
         name = "moon"
         mass = 73.46
-        # distance = [0., 1.3633, 0.]
         distance = [0., 0.3633, 0.]
         orbital_velocity = [0., 0., 1.082]
 
@@ -77,9 +69,6 @@
 
 [[object]]
     name = "mars"
-    # mass =  641.85
-    # distance = 227.9
-    # orbital_velocity = 24.1
     mass =  641.71
     distance = 206.62
     orbital_velocity = 26.5
@@ -88,9 +77,6 @@
 
 [[object]]
     name = "jupiter"
-    # mass =  1899000
-    # distance = 778.6
-    # orbital_velocity = 13.1
     mass =  1898190
     distance = 740.52
     orbital_velocity = 13.72
@@ -99,9 +85,6 @@
 
 [[object]]
     name = "saturn"
-    # mass =  568460
-    # distance = 1433.5
-    # orbital_velocity = 9.7
     mass =  568340
     distance = 1352.55
     orbital_velocity = 10.18
@@ -110,9 +93,6 @@
 
 [[object]]
     name = "uranus"
-    # mass =  86832
-    # distance = 2872.5
-    # orbital_velocity = 6.8
     mass =  86813
     distance = 2741.3
     orbital_velocity = 7.11
@@ -121,9 +101,6 @@
 
 [[object]]
     name = "neptune"
-    # mass =  102430
-    # distance = 4495.1
-    # orbital_velocity = 5.4
     mass =  102413
     distance = 4444.45
     orbital_velocity = 5.5
@@ -132,9 +109,6 @@
 
 [[object]]
     name = "pluto"
-    # mass =  13.1
-    # distance = 5906.4
-    # orbital_velocity = 4.7
     mass =  13.03
     distance = 4436.82
     orbital_velocity = 6.1

@@ -1,37 +1,22 @@
 /**
  * @author      : Riccardo Brugo (brugo.riccardo@gmail.com)
  * @file        : gfx
- * @created     : Monday Feb 17, 2020 15:33:41 CET
+ * @created     : Wednesday Apr 01, 2020 02:48:41 CEST
  * @license     : MIT
  * */
 
 #ifndef GFX_HPP
 #define GFX_HPP
 
-#include <thread>
-#include <shared_mutex>
-
-#include <entt/fwd.hpp>
-
-#include <SDLpp/texture.hpp>
-
-#include <units/physical/si/time.h>
-#include <units/physical/si/frequency.h>
-
-#include "common.hpp"
 #include "context.hpp"
+#include <units/physical/si/frequency.h>
+#include <SDLpp/texture.hpp>
 
 namespace brun
 {
 
-auto center_of_mass(entt::registry & registry) -> brun::position;
-void display(brun::context const &, SDLpp::renderer &, brun::position::value_type const max_radius);
+void draw_graphics(brun::context const & ctx, SDLpp::renderer & renderer, SDLpp::window const & window);
 
-// Generates a function which must be invoked in a thread, which refresh the graphics at a certain rate
-void render_cycle(
-    brun::context & ctx,
-    units::si::frequency<units::si::hertz> const fps
-) noexcept;
 
 } // namespace brun
 
