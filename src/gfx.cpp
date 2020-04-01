@@ -83,7 +83,7 @@ namespace detail
         ImGui::CreateContext();
         constexpr auto glsl_version = "#version 430";
         ImGui::StyleColorsDark();
-        ImGui_ImplSDL2_InitForOpenGL(window.handler(), gl_context.handler());
+        ImGui_ImplSDL2_InitForOpenGL(window.handler(), gl_context);
         ImGui_ImplOpenGL3_Init(glsl_version);
         return ImGui::GetIO();
     }
@@ -209,19 +209,7 @@ auto display(brun::context const & ctx, SDLpp::renderer & renderer)
     }
 
     return std::pair{std::move(circles), std::move(lines)};
-}/*
-
-    // Make the screen black
-    renderer.blend_mode(SDLpp::flag::blend_mode::none);
-    renderer.set_draw_color(SDLpp::colors::black);
-    renderer.clear();
-    {
-        auto lock = std::shared_lock{ctx};  // Lock the data (for safety reasons in multithreading)
-        ranges::for_each(lines,   &SDLpp::paint::line  ::display); // Draw motion trail first,
-        ranges::for_each(circles, &SDLpp::paint::circle::display); //  then circles, on the "canvas"
-    }
-    renderer.present(); // Display the canvas
-}*/
+}
 
 void update_trail(brun::context & ctx)
 {
@@ -251,8 +239,9 @@ void render_cycle(
                     std::string{SDL_GetError()}, std::string{IMG_GetError()});
         return;
     }
-    auto const flags = SDLpp::flag::window::opengl | SDLpp::flag::window::allow_highDPI; // resizable?
+    detail::sdl_gl_set_attributes();
 
+    auto const flags = SDLpp::flag::window::opengl | SDLpp::flag::window::allow_highDPI; // resizable?
     auto window = SDLpp::window{"solar system", {1200, 900}, flags};
     auto renderer = SDLpp::renderer{window, SDLpp::flag::renderer::accelerated};
     if (not renderer) {
@@ -261,14 +250,20 @@ void render_cycle(
     }
     renderer.set_draw_color(SDLpp::colors::black);
 
+    /* int minor, major; */
+    /* SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major); */
+    /* SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor); */
+    /* fmt::print(stderr, "Version {}.{}\n", major, minor); */
+    /* fmt::print(stderr, "Version {}\n", glGetString(GL_VERSION)); */
+
     // Init OpenGL
     // NB: OpenGL is already initialized!
     // See:
     // https://discourse.libsdl.org/t/mixing-opengl-and-renderer/19946/19
     //
     // auto gl_context = detail::raii_wrapper{SDL_GL_CreateContext(window.handler()), SDL_GL_DeleteContext};
-    auto gl_context = detail::raii_wrapper{SDL_GL_GetCurrentContext(), [](auto){}};
-    SDL_GL_MakeCurrent(window.handler(), gl_context.handler());
+    auto gl_context = SDL_GL_GetCurrentContext();
+    SDL_GL_MakeCurrent(window.handler(), gl_context);
     SDL_GL_SetSwapInterval(1); // enable vsync
 
     if (glewInit() != GLEW_OK) {
@@ -277,7 +272,7 @@ void render_cycle(
     }
 
     // Init Dear ImGUI
-    auto & io = init_imgui(window, gl_context);
+    [[maybe_unused]] auto & io = detail::init_imgui(window, gl_context);
     /* auto const imgui_clear_color = ImVec4{0.45f, 0.55f, 0.60f, 1.00f}; */
     auto const imgui_clear_color = ImVec4{0.f, 0.f, 0.f, 1.00f};
 
@@ -288,15 +283,9 @@ void render_cycle(
     int_fast32_t count = 0;
     while (ctx.status.load() == brun::status::running) {
         auto const end = std::chrono::system_clock::now() + time_for_frame;
-        // TODO insert here (or in display?) imgui
-        /* fmt::print(stderr, fmt::fg(fmt::color::red), "HERE\n"); // DEBUG */
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame(window.handler());
         ImGui::NewFrame();
-        /* fmt::print(stderr, fmt::fg(fmt::color::light_green), "DONE\n"); // DEBUG */
-
-        if (++count == fps.count() / 10) {update_trail(ctx); count = 0;}
-        /* display(ctx, renderer); */
 
         // Makes a test window
         {
@@ -309,22 +298,17 @@ void render_cycle(
         }
 
         // Make the screen black
+        if (++count == fps.count() / 10) {update_trail(ctx); count = 0;}
         auto const [circles, lines] = display(ctx, renderer);
         {
-            auto lock = std::shared_lock{ctx};  // Lock the data (for safety reasons in multithreading)
             ranges::for_each(lines,   &SDLpp::paint::line  ::display); // Draw motion trail first,
             ranges::for_each(circles, &SDLpp::paint::circle::display); //  then circles, on the "canvas"
         }
         ImGui::Render();
-        glViewport(0, 0, io.DisplaySize.x, io.DisplaySize.y);
         glClearColor(imgui_clear_color.x, imgui_clear_color.y, imgui_clear_color.z, imgui_clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        /* SDL_GL_SwapWindow(window.handler()); */
-        renderer.present(); // Display the canvas
-        /* renderer.blend_mode(SDLpp::flag::blend_mode::none); */
-        /* renderer.set_draw_color(SDLpp::colors::black); */
-        /* renderer.clear(); */
+        renderer.present(); // Display the canvas (calls `SDL_GL_SwapWindow` inside)
 
         // framerate
         std::this_thread::sleep_until(end);
