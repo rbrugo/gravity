@@ -33,6 +33,21 @@ struct target                             /// Follow a target
 } // namespace follow
 using follow_t = std::variant<follow::com, follow::nothing, follow::target>;
 
+constexpr
+auto absolute_position(entt::registry const & reg, follow_t const & camera)
+    -> brun::position
+{
+    return std::visit([&reg]<typename Follow>(Follow const & obj) {
+        if constexpr (std::is_same_v<Follow, follow::com>) {
+            return center_of_mass(reg) + obj.offset;
+        }
+        if constexpr(std::is_same_v<Follow, follow::target>) {
+            return reg.get<brun::position>(obj.id) + obj.offset;
+        }
+        return obj.offset;
+    }, camera);
+}
+
 /// Represent the status of the simulation
 enum class status : int8_t
 {
@@ -51,13 +66,15 @@ private:
     mutable std::shared_mutex ctx_mtx;
 
 public:
+    brun::position center_of_mass();
+
     inline void lock()     const noexcept { ctx_mtx.lock();   }
     inline bool try_lock() const noexcept { return ctx_mtx.try_lock(); }
     inline void unlock()   const noexcept { ctx_mtx.unlock(); }
 
     inline void lock_shared()     const noexcept { ctx_mtx.lock_shared(); }
     inline bool try_lock_shared() const noexcept { return ctx_mtx.try_lock_shared(); }
-    inline void unlock_shared()   const noexcept { return ctx_mtx.unlock_shared(); }
+    inline void unlock_shared()   const noexcept { ctx_mtx.unlock_shared(); }
 };
 
 } // namespace brun

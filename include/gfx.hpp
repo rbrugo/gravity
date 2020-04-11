@@ -15,7 +15,7 @@
 namespace brun
 {
 
-void draw_graphics(brun::context const & ctx, SDLpp::renderer & renderer, SDLpp::window const & window);
+void draw_graphics(brun::context & ctx, SDLpp::renderer & renderer, SDLpp::window const & window);
 
 
 } // namespace brun

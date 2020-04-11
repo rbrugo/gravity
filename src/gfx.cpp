@@ -35,44 +35,14 @@ namespace
         return std::shared_lock{ctx}, ctx.reg.get<Components...>(entt);
     }
 
-    // Computes the system's center of mass
-    auto center_of_mass(entt::registry const & registry)
-        -> brun::position
-    {
-        using weighted_position = decltype(brun::position{} * brun::mass{});
-        auto pairwise_sum = []<class T, class U>(std::pair<T, U> a, std::pair<T, U> const & b) noexcept {
-            a.first = std::move(a.first) + b.first;
-            a.second = std::move(a.second) + b.second;
-            return a;
-        };
-        using pair = std::pair<weighted_position, brun::mass>;
-
-        auto const pos = [&registry](entt::entity const entt) mutable {
-            auto const [pos, mass] = registry.get<brun::position, brun::mass>(entt);
-            return pair{pos * mass, mass};
-        };
-        auto objects = registry.view<brun::position const, brun::mass const>();
-        auto const [wpos, total_mass] = ::ranges::accumulate(objects, pair{}, pairwise_sum, pos);
-        return 1./total_mass * wpos;
-    }
-
+    inline
     auto compute_origin(brun::context const & ctx)
         -> brun::position
     {
         auto const & follow = ctx.follow;
         auto const & reg = ctx.reg;
         auto lock = std::shared_lock{ctx};  // Lock the data (for safety reasons in multithreading)
-        return std::visit(overloaded{
-            [](follow::nothing stay) {
-                return stay.offset;
-            },
-            [&reg](follow::com com) {
-                return center_of_mass(reg) + com.offset;
-            },
-            [&reg](follow::target target) {
-                return reg.get<brun::position>(target.id) + target.offset;
-            }
-        }, follow);
+        return absolute_position(reg, follow);
     }
 
     // Display every object whith a position, a color and a pixel radius
@@ -149,10 +119,75 @@ namespace
 
         return std::pair{std::move(circles), std::move(lines)};
     }
+
+    template <typename T, typename Variant>
+    struct index;
+
+    template <typename T, typename ...Types>
+    struct index<T, std::variant<Types...>> {
+        static constexpr size_t value = 0;
+    };
+
+    template <typename T, typename U, typename ...Types>
+    struct index<T, std::variant<U, Types...>> {
+        static constexpr size_t value = std::is_same_v<T, U>
+                                        ? 0
+                                        : (index<T, std::variant<Types...>>::value + 1)
+                                        ;
+    };
+
+    template <typename Variant, typename T>
+    constexpr auto index_v = index<T, Variant>::value;
+
+    template <typename T>
+    constexpr auto follow_idx = index_v<brun::follow_t, T>;
+
 } // namespace
 
+void draw_camera_settings(brun::context & ctx)
+{
+    ImGui::Begin("Camera settings");
+    auto _ = std::scoped_lock{ctx};
+    auto const index = ctx.follow.index();
+    static auto current_target = std::optional<entt::entity>{std::nullopt};
+    auto const follow_com    = ImGui::RadioButton("Center of Mass", index == follow_idx<brun::follow::com>);
+    auto const follow_nth    = ImGui::RadioButton("Nothing",        index == follow_idx<brun::follow::nothing>);
+    auto const follow_target = ImGui::RadioButton("Target: ",       index == follow_idx<brun::follow::target>);
+    ImGui::SameLine();
+    auto const show_list     = ImGui::BeginCombo("", current_target.has_value()
+                                                   ? ctx.reg.get<brun::tag>(*current_target).c_str()
+                                                   : "");
+    if (follow_com) {
+        ctx.follow = brun::follow::com{};
+    }
+    else if (follow_nth) {
+        ctx.follow = brun::follow::nothing{absolute_position(ctx.reg, ctx.follow)};
+    }
+    else if (follow_target and current_target.has_value()) {
+        ctx.follow = brun::follow::target{*current_target};
+    }
+    if (show_list) {
+        auto const selected = current_target.value_or(static_cast<entt::entity>(-1));
+        auto const group = ctx.reg.group<brun::position const, brun::tag const>();
+        for (auto const entt : group) {
+            auto const & name = group.get<brun::tag const>(entt);
+            if (ImGui::Selectable(name.c_str(), selected == entt)) {
+                current_target = entt;
+                if (index == follow_idx<brun::follow::target>) {
+                    ctx.follow = brun::follow::target{entt};
+                }
+            }
+            if (selected == entt) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
 
-void draw_graphics(brun::context const & ctx, SDLpp::renderer & renderer, SDLpp::window const & window) {
+    ImGui::End();
+}
+
+void draw_graphics(brun::context & ctx, SDLpp::renderer & renderer, SDLpp::window const & window) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(window.handler());
     ImGui::NewFrame();
@@ -164,8 +199,11 @@ void draw_graphics(brun::context const & ctx, SDLpp::renderer & renderer, SDLpp:
         static bool button = false;
         if (ImGui::Button("Button")) { button = not button; }
         ImGui::Text("Button is pressed: %s\n", button ? "true " : "false");
+        ImGui::Text("Current framerate: %.1f FPS", ImGui::GetIO().Framerate);
         ImGui::End();
     }
+
+    draw_camera_settings(ctx);
 
     // Make the screen black
     auto const [circles, lines] = display(ctx, renderer);

@@ -93,6 +93,9 @@ namespace brun
     {
         return 1./norm(v) * v;
     }
+
+    brun::position center_of_mass(entt::registry const & registry);
+
 } // namespace brun
 
 #endif /* COMMON_HPP */
