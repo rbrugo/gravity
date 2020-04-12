@@ -206,13 +206,9 @@ void render_cycle(
     }
     int_fast16_t count = 0;
     while (ctx.status.load() == brun::status::running) {
-        auto const end = std::chrono::system_clock::now() + time_for_frame;
         io_events(ctx);
         if (++count == fps.count() / 10) {update_trail(ctx); count = 0;}
         draw_graphics(ctx, renderer, window);
-
-        // framerate
-        std::this_thread::sleep_until(end);
     }
 
     // CleanUp
