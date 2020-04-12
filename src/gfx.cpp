@@ -147,7 +147,7 @@ namespace
 void draw_camera_settings(brun::context & ctx)
 {
     ImGui::Begin("Camera settings");
-    auto _ = std::scoped_lock{ctx};
+    auto _ = std::shared_lock{ctx};
     auto const index = ctx.follow.index();
     static auto current_target = std::optional<entt::entity>{std::nullopt};
     auto const follow_com    = ImGui::RadioButton("Center of Mass", index == follow_idx<brun::follow::com>);
@@ -187,6 +187,113 @@ void draw_camera_settings(brun::context & ctx)
     ImGui::End();
 }
 
+void draw_relative_distances(brun::context & ctx)
+{
+    static auto current_target = std::optional<entt::entity>{std::nullopt};
+    static auto options = std::array<bool, 4>{true};
+    auto _ = std::shared_lock{ctx};
+
+    ImGui::Begin("Data");
+    // Structure:
+    // [combo - set target] { com, objs... } [checkbox - relative position] [checkbox - relative speed]
+    // ["name"] ["relative position" (opt)] ["relative speed" (opt)]
+    // [first]  [first pos (opt)] [first speed (opt)]
+
+    auto const show_list = ImGui::BeginCombo("", current_target.has_value()
+                                               ? ctx.reg.get<brun::tag>(*current_target).c_str()
+                                               : "Center of mass");
+    auto const group = ctx.reg.group<brun::position const, brun::velocity const, brun::tag const>();
+    if (show_list) {
+        if (ImGui::Selectable("Center of mass", not current_target.has_value())) {
+            current_target = std::nullopt;
+        }
+        if (not current_target.has_value()) {
+            ImGui::SetItemDefaultFocus();
+        }
+        auto const selected = current_target.value_or(static_cast<entt::entity>(-1));
+        for (auto const entt : group) {
+            auto const & tag = group.get<brun::tag const>(entt);
+            if (ImGui::Selectable(tag.c_str(), selected == entt)) {
+                current_target = entt;
+            }
+            if (selected == entt) {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::Checkbox("distance (norm)", std::addressof(options[0]));
+    ImGui::SameLine();
+    ImGui::Checkbox("position", std::addressof(options[1]));
+    ImGui::SameLine();
+    ImGui::Checkbox("velocity (norm)", std::addressof(options[2]));
+    ImGui::SameLine();
+    ImGui::Checkbox("velocity", std::addressof(options.at(3)));
+
+    if (auto const count = ranges::count(options, true); count != 0) {
+        ImGui::Columns(count + 1, nullptr, true); // # columns, boh, vertical separators
+        // Header
+        ImGui::Separator();
+        ImGui::Text("name");
+        ImGui::NextColumn();
+        if (options[0]) {
+            ImGui::Text("distance (norm)");
+            ImGui::NextColumn();
+        }
+        if (options[1]) {
+            ImGui::Text("position");
+            ImGui::NextColumn();
+        }
+        if (options[2]) {
+            ImGui::Text("velocity (norm)");
+            ImGui::NextColumn();
+        }
+        if (options[3]) {
+            ImGui::Text("velocity");
+            ImGui::NextColumn();
+        }
+
+        auto const & [target_pos, target_vel] = current_target.has_value()
+                                          ? group.get<brun::position const, brun::velocity const>(*current_target)
+                                          : std::pair{
+                                              center_of_mass(ctx.reg), center_of_mass<brun::velocity>(ctx.reg)
+                                          };
+        for (auto const entt : group) {
+            auto const & tag = group.get<brun::tag const>(entt);
+            auto const relative_pos = group.get<brun::position const>(entt) - target_pos;
+            auto const relative_vel = group.get<brun::velocity const>(entt) - target_vel;
+            ImGui::Separator();
+            ImGui::Text("%s", tag.c_str());
+            ImGui::NextColumn();
+            if (options[0]) {
+                auto const abs_pos = fmt::format("{}", norm(relative_pos));
+                ImGui::Text("%s", abs_pos.c_str());
+                ImGui::NextColumn();
+            }
+            if (options[1]) {
+                auto const pos     = fmt::format("{}", relative_pos);
+                ImGui::Text("%s", pos.c_str());
+                ImGui::NextColumn();
+            }
+            if (options[2]) {
+                auto const abs_vel = fmt::format("{}", norm(relative_vel));
+                ImGui::Text("%s", abs_vel.c_str());
+                ImGui::NextColumn();
+            }
+            if (options[3]) {
+                auto const vel     = fmt::format("{}", relative_vel);
+                ImGui::Text("%s", vel.c_str());
+                ImGui::NextColumn();
+            }
+        }
+        ImGui::Columns(1);
+        ImGui::Separator();
+    }
+
+    ImGui::End();
+}
+
 void draw_graphics(brun::context & ctx, SDLpp::renderer & renderer, SDLpp::window const & window) {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame(window.handler());
@@ -204,6 +311,8 @@ void draw_graphics(brun::context & ctx, SDLpp::renderer & renderer, SDLpp::windo
     }
 
     draw_camera_settings(ctx);
+
+    draw_relative_distances(ctx);
 
     // Make the screen black
     auto const [circles, lines] = display(ctx, renderer);

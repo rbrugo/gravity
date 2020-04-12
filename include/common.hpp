@@ -26,6 +26,8 @@
 #include <units/physical/si/force.h>
 #include <units/physical/si/frequency.h>
 
+#include <range/v3/numeric/accumulate.hpp>
+
 namespace brun
 {
 
@@ -94,7 +96,28 @@ namespace brun
         return 1./norm(v) * v;
     }
 
-    brun::position center_of_mass(entt::registry const & registry);
+    // Computes the system's center of mass
+    template <typename Component = brun::position>
+    auto center_of_mass(entt::registry const & registry)
+        -> Component
+    {
+        using weighted_position = decltype(Component{} * brun::mass{});
+        auto pairwise_sum = []<class T, class U>(std::pair<T, U> a, std::pair<T, U> const & b) noexcept {
+            a.first = std::move(a.first) + b.first;
+            a.second = std::move(a.second) + b.second;
+            return a;
+        };
+        using pair = std::pair<weighted_position, brun::mass>;
+
+        auto const pos = [&registry](entt::entity const entt) mutable {
+            auto const [pos, mass] = registry.get<Component, brun::mass>(entt);
+            return pair{pos * mass, mass};
+        };
+        auto objects = registry.view<Component const, brun::mass const>();
+        auto const [wpos, total_mass] = ::ranges::accumulate(objects, pair{}, pairwise_sum, pos);
+        return 1./total_mass * wpos;
+    }
+
 
 } // namespace brun
 
