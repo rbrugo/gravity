@@ -147,13 +147,14 @@ namespace
 void draw_camera_settings(brun::context & ctx)
 {
     ImGui::Begin("Camera settings");
-    auto _ = std::shared_lock{ctx};
+    auto _1 = std::shared_lock{ctx};
     auto const index = ctx.follow.index();
+
     static auto current_target = std::optional<entt::entity>{std::nullopt};
     auto const follow_com    = ImGui::RadioButton("Center of Mass", index == follow_idx<brun::follow::com>);
     auto const follow_nth    = ImGui::RadioButton("Nothing",        index == follow_idx<brun::follow::nothing>);
     auto const follow_target = ImGui::RadioButton("Target: ",       index == follow_idx<brun::follow::target>);
-    ImGui::SameLine();
+    ImGui::SameLine(); ImGui::SetNextItemWidth(150);
     auto const show_list     = ImGui::BeginCombo("", current_target.has_value()
                                                    ? ctx.reg.get<brun::tag>(*current_target).c_str()
                                                    : "");
@@ -184,13 +185,30 @@ void draw_camera_settings(brun::context & ctx)
         ImGui::EndCombo();
     }
 
+    auto const current_radius = ctx.view_radius; _1.unlock();
+    auto radius_count = static_cast<double>(current_radius.count());
+    auto const step = brun::position_scalar{0.1}.count();
+    constexpr auto v_min = brun::position_scalar{0.0001}.count();
+    constexpr auto v_max = brun::position_scalar{100'000.}.count();;
+
+    ImGui::SetNextItemWidth(150 + 86);
+    if (ImGui::DragScalar(
+            "", ImGuiDataType_Double,
+            std::addressof(radius_count), step,
+            std::addressof(v_min), std::addressof(v_max),
+            "radius view: %.4f Gm"
+    )) {
+        auto _2 = std::scoped_lock{ctx};
+        ctx.view_radius = brun::position_scalar{radius_count};
+    }
+
     ImGui::End();
 }
 
 void draw_relative_distances(brun::context & ctx)
 {
     static auto current_target = std::optional<entt::entity>{std::nullopt};
-    static auto options = std::array<bool, 4>{true};
+    static auto options = std::array<bool, 4>{true, false, true, false};
     auto _ = std::shared_lock{ctx};
 
     ImGui::Begin("Data");
@@ -199,6 +217,7 @@ void draw_relative_distances(brun::context & ctx)
     // ["name"] ["relative position" (opt)] ["relative speed" (opt)]
     // [first]  [first pos (opt)] [first speed (opt)]
 
+    ImGui::SetNextItemWidth(150);
     auto const show_list = ImGui::BeginCombo("", current_target.has_value()
                                                ? ctx.reg.get<brun::tag>(*current_target).c_str()
                                                : "Center of mass");
@@ -233,6 +252,7 @@ void draw_relative_distances(brun::context & ctx)
 
     if (auto const count = ranges::count(options, true); count != 0) {
         ImGui::Columns(count + 1, nullptr, true); // # columns, boh, vertical separators
+
         // Header
         ImGui::Separator();
         ImGui::Text("name");
@@ -254,11 +274,15 @@ void draw_relative_distances(brun::context & ctx)
             ImGui::NextColumn();
         }
 
-        auto const & [target_pos, target_vel] = current_target.has_value()
-                                          ? group.get<brun::position const, brun::velocity const>(*current_target)
-                                          : std::pair{
-                                              center_of_mass(ctx.reg), center_of_mass<brun::velocity>(ctx.reg)
-                                          };
+        auto const target_pos = current_target.has_value()
+                              ? group.get<brun::position const>(*current_target)
+                              : center_of_mass(ctx.reg);
+
+        auto const target_vel = current_target.has_value()
+                              ? group.get<brun::velocity const>(*current_target)
+                              : center_of_mass<brun::velocity>(ctx.reg);
+
+
         for (auto const entt : group) {
             auto const & tag = group.get<brun::tag const>(entt);
             auto const relative_pos = group.get<brun::position const>(entt) - target_pos;
