@@ -98,7 +98,7 @@ void simulation(brun::context & ctx, units::si::time<units::si::day> const days_
     // Some config params - some will be configurable from the config file in the future
     /// const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
     constexpr auto first_day = 1;
-    constexpr auto last_day = 365;
+    constexpr auto last_day = 365 * 10;
     /// auto const fps = units::si::frequency<units::si::hertz>{60};
     constexpr auto dt = 10.q_min;        // Maximum of the simulation
 
