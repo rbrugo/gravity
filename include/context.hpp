@@ -62,6 +62,9 @@ struct context
     brun::position_scalar view_radius;
     entt::registry reg;
     follow_t follow;
+
+    std::pair<brun::position_scalar, brun::position_scalar> min_max_view_radius = {0.051_Gm, 100'000._Gm};
+
 private:
     mutable std::shared_mutex ctx_mtx;
 

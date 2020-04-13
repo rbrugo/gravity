@@ -185,11 +185,13 @@ void draw_camera_settings(brun::context & ctx)
         ImGui::EndCombo();
     }
 
+    auto const v_min = ctx.min_max_view_radius.first.count();
+    auto const v_max = ctx.min_max_view_radius.second.count();
     auto const current_radius = ctx.view_radius; _1.unlock();
     auto radius_count = static_cast<double>(current_radius.count());
     auto const step = brun::position_scalar{0.1}.count();
-    constexpr auto v_min = brun::position_scalar{0.0001}.count();
-    constexpr auto v_max = brun::position_scalar{100'000.}.count();;
+    /* constexpr auto v_min = brun::position_scalar{0.0001}.count(); */
+    /* constexpr auto v_max = brun::position_scalar{100'000.}.count();; */
 
     ImGui::SetNextItemWidth(150 + 86);
     if (ImGui::DragScalar(

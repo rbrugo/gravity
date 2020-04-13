@@ -13,6 +13,9 @@
 #include <csignal>                   // signal handling    (std::signal)
 #include <thread>                    // for multithreading (std::threadG
 
+#include <range/v3/view/transform.hpp>
+#include <range/v3/algorithm/max_element.hpp>
+
 #include <fmt/format.h>              // formatting         (fmt::print, fmt::format)
 
 // The program entry point
@@ -34,6 +37,16 @@ int main(int argc, char const * argv[])
     auto ctx = brun::context{};
     ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
     ctx.view_radius = view_radius;
+    ctx.min_max_view_radius.second = [&ctx]() {
+        namespace rvw = ranges::views;
+        auto const entities = ctx.reg.view<brun::position const>();
+        auto const positions = entities
+                             | rvw::transform([&](auto e) { return entities.get<brun::position const>(e); })
+                             | rvw::transform([ ](auto const & p) { return brun::norm(p); })
+                             ;
+        return *::ranges::max_element(positions);
+    }();
+
     // Creates a thread dedicated to simulation
     auto worker = std::thread{brun::simulation, std::ref(ctx), days_per_second};
     // Creates a thread dedicated to IO operations

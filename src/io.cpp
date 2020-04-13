@@ -139,7 +139,8 @@ namespace
             }
             if (delta_view_radius != brun::position_scalar{}) {
                 auto lock = std::scoped_lock{ctx};
-                ctx.view_radius += delta_view_radius;
+                auto const [min, max] = ctx.min_max_view_radius;
+                ctx.view_radius = std::clamp(ctx.view_radius + delta_view_radius, min, max);
             }
         }
     }
