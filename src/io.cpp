@@ -7,6 +7,7 @@
 
 #include "io.hpp"
 #include "gfx.hpp"
+#include "common.hpp"
 
 #include <mutex>
 
@@ -91,8 +92,14 @@ namespace
     auto io_events(brun::context & ctx)
     {
         constexpr auto input_delay = std::chrono::milliseconds{10};
+        auto changes = std::uint8_t{0};
+        enum : uint8_t { displacement_changed = 0b1 << 0, zoom_changed = 0b1 << 1, rotation_changed = 0b1 << 2 };
         auto displacement      = brun::position{};
         auto delta_view_radius = brun::position_scalar{};
+        /* auto rotation          = brun::rotation_matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}; */
+        /* constexpr auto sin = std::sin(M_PI/100); */
+        /* constexpr auto cos = std::cos(M_PI/100); */
+        auto rotation = brun::rotation_info{};
         for (auto const event : SDLpp::event_range) {
             ImGui_ImplSDL2_ProcessEvent(std::addressof(event.handler()));
             auto const input = SDLpp::match(event,
@@ -111,36 +118,66 @@ namespace
                 ctx.status.store(brun::status::stopped);
                 break;
             case SDLK_LEFT:
+                changes |= displacement_changed;
                 displacement = displacement + brun::position{-1._Gm, 0._Gm, 0._Gm};
                 break;
             case SDLK_RIGHT:
+                changes |= displacement_changed;
                 displacement = displacement + brun::position{+1._Gm, 0._Gm, 0._Gm};
                 break;
             case SDLK_UP:
+                changes |= displacement_changed;
                 displacement = displacement + brun::position{0._Gm, -1._Gm, 0._Gm};
                 break;
             case SDLK_DOWN:
+                changes |= displacement_changed;
                 displacement = displacement + brun::position{0._Gm, +1._Gm, 0._Gm};
                 break;
             case '+':
             case SDLK_KP_PLUS:
+                changes |= zoom_changed;
                 delta_view_radius -= 10._Gm;
                 break;
             case '-':
             case SDLK_KP_MINUS:
+                changes |= zoom_changed;
                 delta_view_radius += 10._Gm;
+                break;
+            case 'a':
+                changes |= rotation_changed;
+                ++rotation.z_axis;
+                break;
+            case 'd':
+                changes |= rotation_changed;
+                --rotation.z_axis;
+                break;
+            case 'w':
+                changes |= rotation_changed;
+                ++rotation.x_axis;
+                break;
+            case 's':
+                changes |= rotation_changed;
+                --rotation.x_axis;
                 break;
             default:
                 break;
             }
-            if (std::any_of(begin(displacement), end(displacement), [](auto x) { return x != 0._Gm; })) {
-                auto lock = std::scoped_lock{ctx};
-                std::visit([&displacement](auto & follow) { follow.offset = follow.offset + displacement; }, ctx.follow);
-            }
-            if (delta_view_radius != brun::position_scalar{}) {
-                auto lock = std::scoped_lock{ctx};
+        }
+
+        if (changes != 0) {
+            auto lock = std::scoped_lock{ctx};
+            if ((changes & zoom_changed) != 0) {
                 auto const [min, max] = ctx.min_max_view_radius;
                 ctx.view_radius = std::clamp(ctx.view_radius + delta_view_radius, min, max);
+            }
+            if ((changes & rotation_changed) != 0) {
+                ctx.rotation.z_axis += rotation.z_axis;
+                ctx.rotation.x_axis += rotation.x_axis;
+            }
+            if ((changes & displacement_changed) != 0) {
+                std::visit([&ctx, &displacement](auto & follow) {
+                    follow.offset = follow.offset + brun::build_reversed_rotation_matrix(ctx.rotation) * displacement;
+                }, ctx.follow);
             }
         }
     }

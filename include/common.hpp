@@ -55,7 +55,7 @@ namespace units::si
     struct gigametre : prefixed_unit<gigametre, giga, metre> {};
     struct kilometre_per_second : deduced_unit<kilometre_per_second, dim_velocity, kilometre, second> {};
     struct yottagram : prefixed_unit<yottagram, yotta, gram> {};
-} // namespace units
+} // namespace units::si
 
 namespace brun
 {
@@ -68,6 +68,16 @@ namespace brun
     using trail     = std::deque<position>;                                         // list of past positions
     using tag       = std::string;
     using px_radius = float;
+    using rotation_matrix = std::experimental::math::fs_matrix<brun::position_scalar::rep, 3, 3>;
+
+    struct rotation_info
+    {
+        constexpr rotation_info() = default;
+        constexpr rotation_info(uint8_t a, uint8_t b) : z_axis{a}, x_axis{b} {};
+        uint8_t z_axis = 0;
+        uint8_t x_axis = 0;
+        inline auto operator-() const { return rotation_info(256 - z_axis, 256 - x_axis) ; };
+    };
 
     inline namespace literals
     {
@@ -118,6 +128,8 @@ namespace brun
         return 1./total_mass * wpos;
     }
 
+    auto build_rotation_matrix(rotation_info const info) -> brun::rotation_matrix;
+    auto build_reversed_rotation_matrix(rotation_info const info) -> brun::rotation_matrix;
 
 } // namespace brun
 

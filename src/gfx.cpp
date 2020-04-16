@@ -6,6 +6,7 @@
  */
 
 #include "gfx.hpp"
+#include "common.hpp"
 
 #include <mutex>
 
@@ -51,7 +52,9 @@ namespace
     {
         namespace rvw = ::ranges::views;
         auto const & registry = ctx.reg;
-        auto const view_radius = [&ctx]{ return std::shared_lock{ctx}, ctx.view_radius; }();
+        auto const [view_radius, rotation] = [&ctx]{
+            return std::shared_lock{ctx}, std::pair{ctx.view_radius, build_rotation_matrix(ctx.rotation)};
+        }();
         auto const [_a, _b, w, h] = renderer.size(); // get width and height
         auto const compute_displacement = [origin = compute_origin(ctx)](auto const & _1) { return _1 - origin; };
 
@@ -59,6 +62,7 @@ namespace
         // FIXME this way one cannot see planets in the corner, outside of the circle
         auto const scale_coeff = 1. / view_radius * std::max(w, h) * 0.5;
         auto rescale = [scale_coeff](auto const & _1) { return scale_coeff * _1; };
+        auto rotate  = [&rotation]  (auto const & _1) { return rotation    * _1; };
 
         // Build a "circle" to be displayed
         auto to_circle = [&renderer, w, h](brun::position const & pos, SDLpp::color const color, float const radius)
@@ -85,7 +89,7 @@ namespace
             }
 
             auto const [color, rad] = ts_get<SDLpp::color, brun::px_radius>(ctx, entt);
-            auto const circle = to_circle(rescaled, color, rad);
+            auto const circle = to_circle(rotate(rescaled), color, rad);
             circles.push_back(circle);
 
             if (not registry.has<brun::trail>(entt)) {
@@ -97,6 +101,7 @@ namespace
             auto scaled_trail = trail
                               | rvw::transform(compute_displacement)
                               | rvw::transform(rescale)
+                              | rvw::transform(rotate)
                               ;
             auto const alpha = rvw::iota(1ul, trail.size() + 1)
                              | rvw::transform([s=trail.size()](auto const blending) -> uint8_t {
@@ -190,8 +195,6 @@ void draw_camera_settings(brun::context & ctx)
     auto const current_radius = ctx.view_radius; _1.unlock();
     auto radius_count = static_cast<double>(current_radius.count());
     auto const step = brun::position_scalar{0.1}.count();
-    /* constexpr auto v_min = brun::position_scalar{0.0001}.count(); */
-    /* constexpr auto v_max = brun::position_scalar{100'000.}.count();; */
 
     ImGui::SetNextItemWidth(150 + 86);
     if (ImGui::DragScalar(
@@ -353,5 +356,4 @@ void draw_graphics(brun::context & ctx, SDLpp::renderer & renderer, SDLpp::windo
     renderer.present(); // Display the canvas (calls `SDL_GL_SwapWindow` inside)
 }
 } // namespace brun
-
 

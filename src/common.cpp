@@ -29,6 +29,49 @@ void dump(entt::registry & reg, std::optional<int> day)
     fmt::print(divisor);
 }
 
+// Build the rotation matrix
+auto build_rotation_matrix(brun::rotation_info const rotation)
+    -> brun::rotation_matrix
+{
+    auto const x_rad = rotation.x_axis * 2 * M_PI / 255;
+    auto const z_rad = rotation.z_axis * 2 * M_PI / 255;
+
+    auto const z_rotation = brun::rotation_matrix{
+        {  std::cos(z_rad), std::sin(z_rad), 0. },
+        { -std::sin(z_rad), std::cos(z_rad), 0. },
+        {               0.,             0.,  1. }
+    };
+
+    auto const x_rotation = brun::rotation_matrix{
+            {1.,  0.,              0.},
+            {0.,  std::cos(x_rad), std::sin(x_rad)},
+            {0., -std::sin(x_rad), std::cos(x_rad)}
+    };
+
+    return x_rotation * z_rotation;
+}
+
+auto build_reversed_rotation_matrix(brun::rotation_info const rotation)
+    -> brun::rotation_matrix
+{
+    auto const x_rad = -rotation.x_axis * 2 * M_PI / 255;
+    auto const z_rad = -rotation.z_axis * 2 * M_PI / 255;
+
+    auto const z_rotation = brun::rotation_matrix{
+        {  std::cos(z_rad), std::sin(z_rad), 0. },
+        { -std::sin(z_rad), std::cos(z_rad), 0. },
+        {               0.,             0.,  1. }
+    };
+
+    auto const x_rotation = brun::rotation_matrix{
+            {1.,  0.,              0.},
+            {0.,  std::cos(x_rad), std::sin(x_rad)},
+            {0., -std::sin(x_rad), std::cos(x_rad)}
+    };
+
+    return z_rotation * x_rotation;
+}
+
 } // namespace brun
 
 

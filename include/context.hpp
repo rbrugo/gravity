@@ -60,6 +60,7 @@ struct context
 {
     std::atomic<brun::status> status = status::starting;
     brun::position_scalar view_radius;
+    brun::rotation_info rotation;
     entt::registry reg;
     follow_t follow;
 
