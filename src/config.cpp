@@ -13,7 +13,9 @@
 #include <filesystem>
 
 #include <toml.hpp>
-#include <nlohmann/json.hpp>
+#ifndef GRAVITY_NO_JSON
+#   include <nlohmann/json.hpp>
+#endif // GRAVITY_NO_JSON
 
 #include <tl/expected.hpp>
 #include <range/v3/action/transform.hpp>
@@ -27,7 +29,11 @@ namespace detail
 {
     // Loads from file a JSON or a TOML table
     auto load_data(std::filesystem::path const & data_path)
+#ifndef GRAVITY_NO_JSON
         -> std::variant<nlohmann::json, toml::table>
+#else
+        -> std::variant<toml::table>
+#endif
     {
         if (not std::filesystem::exists(data_path)) {
             fmt::print(stderr, "Error - can't find file {}\n", data_path);
@@ -42,9 +48,14 @@ namespace detail
         constexpr auto tolower = [](unsigned char ch) noexcept { return std::tolower(ch); };
         auto const ext = data_path.extension().string() | ranges::actions::transform(tolower);
         if (ext == ".json") {
+#ifndef GRAVITY_NO_JSON
             auto json = nlohmann::json{};
             file >> json;
             return json;
+#else
+            fmt::print(stderr, "Error - json support is not enabled\n");
+            std::exit(3);
+#endif
         } else if (ext == ".toml") {
             return toml::parse(file);
         } else {
@@ -111,6 +122,7 @@ namespace detail
         return expected{tl::unexpect, parse_error};
     }
 
+#ifndef GRAVITY_NO_JSON
     // Build a registry from a JSON table
     auto build_registry(nlohmann::json const & json) //FIXME //TODO incomplete
         -> entt::registry
@@ -119,23 +131,24 @@ namespace detail
         using brun::literals::operator""_kmps;
         using brun::literals::operator""_Yg;
         auto registry = entt::registry{};
-        for (auto const data : json) {
+        for (auto const & data : json) {
             auto const entity = registry.create();
             auto const position = brun::position{0._Gm, data["distance_from_sun [e6 km]"].get<double>() * 1._Gm, 0._Gm};
             auto const velocity = brun::velocity{data["orbital_velocity [km/s]"].get<double>() * 1._kmps, 0._kmps, 0._kmps};
             auto const mass     = brun::mass{data["mass [Yg]"].get<double>() * 1._Yg};
             auto const name     = data["name"].get<std::string>();
             auto const color    = data.value("color", 0xFFFF00);
-            registry.assign<brun::tag>(entity, name);
-            registry.assign<brun::position>(entity, position);
-            registry.assign<brun::velocity>(entity, velocity);
-            registry.assign<brun::mass>(entity, mass);
-            registry.assign<SDLpp::color>(entity, SDLpp::color{
+            registry.emplace<brun::tag>(entity, name);
+            registry.emplace<brun::position>(entity, position);
+            registry.emplace<brun::velocity>(entity, velocity);
+            registry.emplace<brun::mass>(entity, mass);
+            registry.emplace<SDLpp::color>(entity, SDLpp::color{
                 uint8_t((color & 0xFF0000) >> 16), uint8_t((color & 0x00FF00) >> 8), uint8_t(color & 0x0000FF)
             }); //this or without default?
         }
         return registry;
     }
+#endif // GRAVITY_NO_JSON
 
     // Given a table an attribute and an optional default value, returns the content of the table if it is
     //  present and match the requested type, or the default value if the table has not an entry named after attr;
@@ -214,16 +227,16 @@ namespace detail
         // Create a new entity inside the registry and register its attributes
         fmt::print("Registered object \"{}\"\n", name);
         auto const entity = registry.create();
-        registry.assign<brun::tag>(entity, name);
-        registry.assign<brun::position>(entity, position.value() + base_position);
-        registry.assign<brun::velocity>(entity, velocity.value() + base_velocity);
-        registry.assign<brun::mass>(entity, *mass * 1._Yg);
-        registry.assign<SDLpp::color>(entity, SDLpp::color{
+        registry.emplace<brun::tag>(entity, name);
+        registry.emplace<brun::position>(entity, position.value() + base_position);
+        registry.emplace<brun::velocity>(entity, velocity.value() + base_velocity);
+        registry.emplace<brun::mass>(entity, *mass * 1._Yg);
+        registry.emplace<SDLpp::color>(entity, SDLpp::color{
             uint8_t((*color & 0xFF0000) >> 16), uint8_t((*color & 0x00FF00) >> 8), uint8_t(*color & 0x0000FF)
         });
-        registry.assign<brun::px_radius>(entity, *px_radius);
+        registry.emplace<brun::px_radius>(entity, *px_radius);
         if (auto const n = trail.value(); n > 0) {
-            auto & tail = registry.assign<brun::trail>(entity);
+            auto & tail = registry.emplace<brun::trail>(entity);
             tail.resize(std::clamp(n, 0, 300), *position + base_position);
         }
 

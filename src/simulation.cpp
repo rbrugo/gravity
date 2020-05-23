@@ -86,8 +86,8 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
     });
     auto lock = std::scoped_lock{ctx};  // Lock the registry so I can write in it safely (bc multithread)
     for (auto const & [target, position, velocity] : updated) {
-        reg.assign_or_replace<brun::position>(target, position);
-        reg.assign_or_replace<brun::velocity>(target, velocity);
+        reg.emplace_or_replace<brun::position>(target, position);
+        reg.emplace_or_replace<brun::velocity>(target, velocity);
     }
 }
 
