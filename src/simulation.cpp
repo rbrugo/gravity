@@ -19,7 +19,6 @@
 namespace brun
 {
 
-namespace la = std::experimental::math;
 using namespace units::si::literals;
 using units::si::operator""q_d;
 using brun::literals::operator""_Gm;
@@ -60,7 +59,8 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
                 auto const mass      = reg.get<brun::mass>(other);
                 // Workaround for ambiguous overload resolution
                 /* auto const res       = (mass / (distance * distance)) * brun::unit(distance); */
-                auto const res       = std::experimental::math::operator*(
+                /* auto const res       = brun::unit(distance) * mass / (distance * distance); */
+                auto const res       = la::operator*(
                     mass / (distance * distance), brun::unit(distance)
                 );
                 accumulator = accumulator + res;

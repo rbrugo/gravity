@@ -28,6 +28,8 @@
 
 #include <range/v3/numeric/accumulate.hpp>
 
+namespace la = STD_LA;
+
 namespace brun
 {
 
@@ -48,6 +50,75 @@ namespace STD_LA
     }
 } // namespace STD_LA
 
+template <typename T, typename N>
+struct fmt::formatter<la::vector<T, N>>
+{
+    char specifier = '\0';
+    std::uint8_t precision = -1;
+    std::uint8_t align_width = -1;
+    char align_spec = '\0';
+
+    constexpr auto parse_int(format_parse_context::iterator it, std::uint8_t & property)
+    {
+        property = 0;
+        while (*it >= '0' and *it <= '9') {
+            property = property * 10 - '0' + *it;
+            ++it;
+        }
+        return it;
+    }
+
+    constexpr auto parse(format_parse_context & ctx)
+    {
+        auto it = ctx.begin(), end = ctx.end();
+        while (it != end and *it != '}') {
+            switch (*it) {
+            case '^':
+            case '<':
+            case '>':
+                align_spec = *it;
+                it = parse_int(std::next(it), align_width);
+                break;
+            case '.':
+                it = parse_int(std::next(it), precision);
+                break;
+            case 'e':
+            case 'E':
+            case 'g':
+            case 'G':
+                specifier = *it;
+                break;
+            default:
+                throw fmt::format_error{"invalid specifier"};
+            }
+        }
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(la::vector<T, N> const & v, FormatContext & ctx)
+    {
+        auto quantity = fmt::format(
+            "{}:%{}{}Q{}", '{',
+            precision != static_cast<uint8_t>(-1) ? fmt::format(".{}", precision) : "",
+            specifier != '\0' ? fmt::format("{}", specifier) : "",
+        '}');
+        // "{:%.3gQ}"
+        auto format_string = fmt::format("({0} {0} {0}) {1}", std::move(quantity), "{:%q}");
+        // "({:%.3gQ} {:%.3gQ} {:%.3gQ}) {:%q}"
+        auto formatted     = fmt::format(format_string, v[0], v[1], v[2], v[2]);
+        // "(12.3 13 13) m"
+
+        auto align_string = fmt::format("{}:{}{}", '{',
+            align_spec != '\0' ? fmt::format("{}{}", align_spec, align_width) : "",
+        '}');
+        // "{:^3}"
+
+        return format_to(ctx.out(), align_string, formatted);
+        // fmt::format("{:^3}", "(12.3 13 13) m")
+    }
+};
+
 namespace units::si
 {
     // Some new SI units type definitions
@@ -62,13 +133,13 @@ namespace brun
     // Some type aliases
     using position_scalar = units::si::length<units::si::gigametre>;                // Gm type
     using velocity_scalar = units::si::velocity<units::si::kilometre_per_second>;   // km/s type
-    using position  = std::experimental::math::fs_vector<position_scalar, 3>;       // 3-vec of Gm
-    using velocity  = std::experimental::math::fs_vector<velocity_scalar, 3>;       // 3-vec of km/s
+    using position  = la::fs_vector<position_scalar, 3>;       // 3-vec of Gm
+    using velocity  = la::fs_vector<velocity_scalar, 3>;       // 3-vec of km/s
     using mass      = units::si::mass<units::si::yottagram>;                        // Yg type
     using trail     = std::deque<position>;                                         // list of past positions
     using tag       = std::string;
     using px_radius = float;
-    using rotation_matrix = std::experimental::math::fs_matrix<brun::position_scalar::rep, 3, 3>;
+    using rotation_matrix = la::fs_matrix<brun::position_scalar::rep, 3, 3>;
 
     struct rotation_info
     {
@@ -88,20 +159,20 @@ namespace brun
 
     template <typename ET, typename OT>
     constexpr
-    auto norm(std::experimental::math::vector<ET, OT> const & v) noexcept
-        -> typename std::experimental::math::vector<ET,OT>::value_type
+    auto norm(la::vector<ET, OT> const & v) noexcept
+        -> typename la::vector<ET,OT>::value_type
     {
         auto const sq_norm = v * v;
         if constexpr(not std::is_floating_point_v<typename std::decay<decltype(sq_norm)>::type>) {
             return units::sqrt(v * v);
         } else {
-            return typename std::experimental::math::vector<ET,OT>::value_type{std::sqrt(sq_norm)};
+            return typename la::vector<ET,OT>::value_type{std::sqrt(sq_norm)};
         }
     }
 
     template <typename ET, typename OT>
     constexpr
-    auto unit(std::experimental::math::vector<ET, OT> const & v) noexcept
+    auto unit(la::vector<ET, OT> const & v) noexcept
     {
         return 1./norm(v) * v;
     }

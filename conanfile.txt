@@ -1,5 +1,5 @@
 [requires]
-linear_algebra/0.6.0@public-conan/testing
+linear_algebra/0.7.0@public-conan/testing
 entt/3.4.0
 imgui/1.75
 sdl2/2.0.10@bincrafters/stable
