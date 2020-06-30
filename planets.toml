@@ -13,9 +13,12 @@
 # TODO: orbital_velocity_unit = "km/s"
 
 # TODO: visual_radius = 448.8
-    motion_trail_length = 10000  # default length for motion trail (in px) | default: 0 (disabled)
-    default_px_radius = 5.     # default radius for objects (in px)      | default: 5.
-    default_color = 0x994C00   # default color for objects (hex or int)  | default: 0x994C00
+    motion_trail_length = 10000
+    # default length for motion trail (in px) | default: 0 (disabled)
+    default_px_radius = 5.0
+    # default radius for objects (in px)      | default: 5.
+    default_color = 0x994C00
+    # default color for objects (hex or int)  | default: 0x994C00
 
 [[object]]
     name = "Mario"
@@ -40,7 +43,7 @@
     orbital_velocity = 58.98
 
 
-    px_radius = 2.
+    px_radius = 2.0
     color = 0x79757D
 
 [[object]]
@@ -61,8 +64,8 @@
     [[object.satellites]]
         name = "moon"
         mass = 73.46
-        distance = [0., 0.3633, 0.]
-        orbital_velocity = [0., 0., 1.082]
+        distance = [0, 0.3633, 0]
+        orbital_velocity = [0, 0, 1.082]
 
         px_radius = 1
         color = 0x79757D

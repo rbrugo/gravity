@@ -29,7 +29,6 @@ if (CCACHE_FOUND AND CCACHE_SUPPORT)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
 endif()
 
-target_compile_definitions(gravity PUBLIC GRAVITY_NO_JSON) # nlohmann_json/3.7.3 is incompatible with GCC10
 target_compile_options(gravity PRIVATE -Wall -Wextra -Wpedantic -fconcepts)
 target_link_options(gravity PRIVATE)
 

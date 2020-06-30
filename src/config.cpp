@@ -93,7 +93,7 @@ namespace detail
             if (arr.size() != 1 and arr.size() != 3) {
                 return expected{tl::unexpect, parse_error};
             }
-            if (not arr[0].is_number() or not arr.is_homogeneous()) {
+            if (not arr[0].is_number()) {
                 return expected{tl::unexpect, parse_error};
             }
             if (arr.size() == 1) {
@@ -106,6 +106,9 @@ namespace detail
                 }
             }
             else {
+                if (not arr[1].is_number() or not arr[2].is_number()) {
+                    return expected{tl::unexpect, parse_error};
+                }
                 return vector_type{get(arr[0]), get(arr[1]), get(arr[2])};
             }
         }
