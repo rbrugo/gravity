@@ -42,9 +42,9 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
     struct data_node { entt::entity entity; brun::position pos; brun::velocity vel; };
     auto updated = std::vector<data_node>{}; updated.reserve(movables.size());
     auto updated_mtx = std::mutex{};
-    std::for_each(std::execution::par_unseq, movables.begin(), movables.end(), [&](auto const target) {
+    std::for_each(std::execution::par_unseq, movables.begin(), movables.end(), [&](auto const target) noexcept {
         // Function needed to compute acceleration on a target object, given his current position
-        auto compute_acceleration = [&massives, &reg](auto const target, auto const & position) mutable {
+        auto compute_acceleration = [&massives, &reg](auto const target, auto const & position) mutable noexcept {
             using mass_on_sq_dist = la::fs_vector<decltype(1._Yg/(1._Gm*1._Gm)), 3>;
             constexpr auto G = brun::constants::G<brun::position, brun::mass>;
 
@@ -123,11 +123,11 @@ void simulation(brun::context & ctx, units::si::time<units::si::day> const days_
     auto const total_calc_begin = std::chrono::steady_clock::now();
     fmt::print(stderr, "Δt: {}\ndt: {}\ntimestep: {}\n", days_per_millisecond, dt, timestep);
 
-    ctx.status.store(brun::status::running);
+    ctx.status.store(brun::status::running, std::memory_order::release);
     for (auto const day : rvw::iota(first_day, last_day)) {
         accumulator -= 24.q_h;
         brun::dump(registry, day);  // Once a day, dumps data on terminal
-        if (ctx.status.load() == brun::status::stopped) {
+        if (ctx.status.load(std::memory_order::acquire) == brun::status::stopped) {
             fmt::print(stderr, "Simulation stopped\n");
             return;
         }
@@ -147,7 +147,7 @@ void simulation(brun::context & ctx, units::si::time<units::si::day> const days_
         auto const avg_calc_time = (day_calc_end - total_calc_begin)/(day - first_day + 1);
         fmt::print("This day calc time: {}\nAverage simulation rate: {}\n", day_calc_time, avg_calc_time);
     }
-    ctx.status.store(brun::status::stopped);
+    ctx.status.store(brun::status::stopped, std::memory_order::release);
     brun::dump(registry, last_day);
 }
 

@@ -65,10 +65,10 @@ namespace
     // ...set gl attributes
     void sdl_gl_set_attributes()
     {
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+        /* SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0); */
+        /* SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4); */
+        /* SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3); */
+        /* SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE); */
 
         // Window with graphics context
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -115,7 +115,7 @@ namespace
             );
             switch (input) {
             case +'q':
-                ctx.status.store(brun::status::stopped);
+                ctx.status.store(brun::status::stopped, std::memory_order::release);
                 break;
             case SDLK_LEFT:
                 changes |= displacement_changed;
@@ -239,11 +239,11 @@ void render_cycle(
     [[maybe_unused]] auto & io = init_imgui(window, gl_context);
 
     // Wait for the simulation
-    while (ctx.status.load() == brun::status::starting) {
+    while (ctx.status.load(std::memory_order::acquire) == brun::status::starting) {
         std::this_thread::yield();
     }
     int_fast16_t count = 0;
-    while (ctx.status.load() == brun::status::running) {
+    while (ctx.status.load(std::memory_order::acquire) == brun::status::running) {
         io_events(ctx);
         if (++count == fps.count() / 10) {update_trail(ctx); count = 0;}
         draw_graphics(ctx, renderer, window);

@@ -27,10 +27,10 @@ namespace brun
 auto keyboard_cycle(brun::context & ctx)
 {
     constexpr auto input_delay = std::chrono::milliseconds{10};
-    while (ctx.status.load() == brun::status::starting) {
+    while (ctx.status.load(std::memory_order::acquire) == brun::status::starting) {
         std::this_thread::yield();
     }
-    while (ctx.status.load() == brun::status::running) {
+    while (ctx.status.load(std::memory_order::acquire) == brun::status::running) {
         auto displacement      = brun::position{};
         auto delta_view_radius = brun::position_scalar{};
         for (auto const event : SDLpp::event_range) {
@@ -47,7 +47,7 @@ auto keyboard_cycle(brun::context & ctx)
             );
             switch (input) {
             case +'q':
-                ctx.status.store(brun::status::stopped);
+                ctx.status.store(brun::status::stopped, std::memory_order::release);
                 break;
             case SDLK_LEFT:
                 displacement = displacement + brun::position{+1._Gm, 0._Gm, 0._Gm};
