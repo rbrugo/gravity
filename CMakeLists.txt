@@ -5,6 +5,7 @@ project( gravity
          VERSION 0.1
          DESCRIPTION " ")
 
+set(CONAN_SYSTEM_INCLUDES "On")
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
@@ -29,7 +30,7 @@ if (CCACHE_FOUND AND CCACHE_SUPPORT)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "ccache")
 endif()
 
-target_compile_options(gravity PRIVATE -Wall -Wextra -Wpedantic -fconcepts)
+target_compile_options(gravity PRIVATE -Wall -Wextra -Wpedantic -Wdeprecated-declarations)
 target_link_options(gravity PRIVATE)
 
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")

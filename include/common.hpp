@@ -119,23 +119,23 @@ struct fmt::formatter<la::vector<T, N>>
     }
 };
 
-namespace units::si
+namespace units::physical::si
 {
     // Some new SI units type definitions
-    struct megametre : prefixed_unit<megametre, mega, metre> {};
-    struct gigametre : prefixed_unit<gigametre, giga, metre> {};
-    struct kilometre_per_second : deduced_unit<kilometre_per_second, dim_velocity, kilometre, second> {};
-    struct yottagram : prefixed_unit<yottagram, yotta, gram> {};
+    /* struct megametre : prefixed_unit<megametre, mega, metre> {}; */
+    /* struct gigametre : prefixed_unit<gigametre, giga, metre> {}; */
+    struct kilometre_per_second : deduced_unit<kilometre_per_second, dim_speed, kilometre, second> {};
+    /* struct yottagram : prefixed_unit<yottagram, yotta, gram> {}; */
 } // namespace units::si
 
 namespace brun
 {
     // Some type aliases
-    using position_scalar = units::si::length<units::si::gigametre>;                // Gm type
-    using velocity_scalar = units::si::velocity<units::si::kilometre_per_second>;   // km/s type
+    using position_scalar = units::physical::si::length<units::physical::si::gigametre>;      // Gm type
+    using velocity_scalar = units::physical::si::speed<units::physical::si::kilometre_per_second>;   // km/s type
     using position  = la::fs_vector<position_scalar, 3>;       // 3-vec of Gm
     using velocity  = la::fs_vector<velocity_scalar, 3>;       // 3-vec of km/s
-    using mass      = units::si::mass<units::si::yottagram>;                        // Yg type
+    using mass      = units::physical::si::mass<units::physical::si::yottagram>;                        // Yg type
     using trail     = std::deque<position>;                                         // list of past positions
     using tag       = std::string;
     using px_radius = float;
@@ -164,7 +164,7 @@ namespace brun
     {
         auto const sq_norm = v * v;
         if constexpr(not std::is_floating_point_v<typename std::decay<decltype(sq_norm)>::type>) {
-            return units::sqrt(v * v);
+            return units::sqrt(sq_norm);
         } else {
             return typename la::vector<ET,OT>::value_type{std::sqrt(sq_norm)};
         }

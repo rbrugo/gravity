@@ -30,7 +30,7 @@ void display(brun::context const &, SDLpp::renderer &, brun::position::value_typ
 // Generates a function which must be invoked in a thread, which refresh the graphics at a certain rate
 void render_cycle(
     brun::context & ctx,
-    units::si::frequency<units::si::hertz> const fps
+    units::physical::si::frequency<units::physical::si::hertz> const fps
 ) noexcept;
 
 } // namespace brun

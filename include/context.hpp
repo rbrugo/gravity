@@ -66,6 +66,12 @@ struct context
 
     std::pair<brun::position_scalar, brun::position_scalar> min_max_view_radius = {0.051_Gm, 100'000._Gm};
 
+    context() = default;
+    context(context const &) = delete;
+    context(context &&)      = delete;
+    auto operator=(context const &) = delete;
+    auto operator=(context &&) = delete;
+
 private:
     mutable std::shared_mutex ctx_mtx;
 

@@ -10,9 +10,8 @@
 
 #include <mutex>
 
-#include <range/v3/algorithm.hpp>
-#include <range/v3/numeric.hpp>
-#include <range/v3/view.hpp>
+#include <range/v3/view/tail.hpp>
+#include <range/v3/view/zip.hpp>
 
 #include <SDLpp/paint/shapes.hpp>
 
@@ -50,18 +49,27 @@ namespace
     auto display(brun::context const & ctx, SDLpp::renderer & renderer)
         -> std::pair<std::vector<SDLpp::paint::circle>, std::vector<SDLpp::paint::line>>
     {
-        namespace rvw = ::ranges::views;
         auto const & registry = ctx.reg;
         auto const [view_radius, rotation] = [&ctx]{
             return std::shared_lock{ctx}, std::pair{ctx.view_radius, build_rotation_matrix(ctx.rotation)};
         }();
         auto const [_a, _b, w, h] = renderer.size(); // get width and height
-        auto const compute_displacement = [origin = compute_origin(ctx)](auto const & _1) { return _1 - origin; };
+        auto const compute_displacement = [origin = compute_origin(ctx)](auto const & _1) {
+            static_assert(std::same_as<std::decay_t<decltype(origin)>, std::decay_t<decltype(_1)>>);
+            return _1 - origin;
+        };
 
         // Rescale the vector such that the screen has "radius" 1.
         // FIXME this way one cannot see planets in the corner, outside of the circle
-        auto const scale_coeff = 1. / view_radius * std::max(w, h) * 0.5;
-        auto rescale = [scale_coeff](auto const & _1) { return scale_coeff * _1; };
+        auto const scale_coeff = 1. / view_radius * std::max(w, h) * 0.5; // px/Gm
+        auto rescale = [scale_coeff](auto const & _1) {
+            auto const tmp = scale_coeff * _1; // this is a vector of dimensionless units;
+                                               // should be ok, but fails to compile
+                                               // so i need to transform it in a vector of scalars
+            auto res = la::fs_vector<double, tmp.size()>{};
+            std::transform(begin(tmp), end(tmp), begin(res), [](auto x) { return x.count(); });
+            return res; //scale_coeff * _1;
+        };
         auto rotate  = [&rotation]  (auto const & _1) { return rotation    * _1; };
 
         // Build a "circle" to be displayed
@@ -99,24 +107,25 @@ namespace
             auto const [r, g, b, a] = color;
             auto const trail = registry.get<brun::trail>(entt);
             auto scaled_trail = trail
-                              | rvw::transform(compute_displacement)
-                              | rvw::transform(rescale)
-                              | rvw::transform(rotate)
+                              | std::views::transform(compute_displacement)
+                              | std::views::transform(rescale)
+                              | std::views::transform(rotate)
                               ;
-            auto const alpha = rvw::iota(1ul, trail.size() + 1)
-                             | rvw::transform([s=trail.size()](auto const blending) -> uint8_t {
+            auto const alpha = std::views::iota(1ul, trail.size() + 1)
+                             | std::views::transform([s=trail.size()](auto const blending) -> uint8_t {
                                  return std::lerp(200., 1., blending * 1. / s);
                              })
                              ;
             auto to_line = [&renderer, w,h, r,g,b](auto const pts, auto const alpha) mutable {
                 auto const [p0, p1] = pts;
-                auto const x0 = double(p0[0] + w/2);
-                auto const y0 = double(p0[1] + h/2);
-                auto const x1 = double(p1[0] + w/2);
-                auto const y1 = double(p1[1] + h/2);
+                auto const x0 = p0[0] + w/2;
+                auto const y0 = p0[1] + h/2;
+                auto const x1 = p1[0] + w/2;
+                auto const y1 = p1[1] + h/2;
                 return SDLpp::paint::line{renderer, SDLpp::point2d{x0, y0}, {x1, y1}, {r, g, b, alpha}};
             };
 
+            namespace rvw = ::ranges::views;
             for (auto const [pts, alpha] : rvw::zip(rvw::zip(scaled_trail, rvw::tail(scaled_trail)), alpha)) {
                 lines.push_back(to_line(pts, alpha));
             }
@@ -255,7 +264,7 @@ void draw_relative_distances(brun::context & ctx)
     ImGui::SameLine();
     ImGui::Checkbox("velocity", std::addressof(options.at(3)));
 
-    if (auto const count = ranges::count(options, true); count != 0) {
+    if (auto const count = std::ranges::count(options, true); count != 0) {
         ImGui::Columns(count + 1, nullptr, true); // # columns, boh, vertical separators
 
         // Header
@@ -346,8 +355,8 @@ void draw_graphics(brun::context & ctx, SDLpp::renderer & renderer, SDLpp::windo
     // Make the screen black
     auto const [circles, lines] = display(ctx, renderer);
     {
-        ranges::for_each(lines,   &SDLpp::paint::line  ::display); // Draw motion trail first,
-        ranges::for_each(circles, &SDLpp::paint::circle::display); //  then circles, on the "canvas"
+        std::ranges::for_each(lines,   &SDLpp::paint::line  ::display); // Draw motion trail first,
+        std::ranges::for_each(circles, &SDLpp::paint::circle::display); //  then circles, on the "canvas"
     }
     ImGui::Render();
     glClearColor(0.00f, 0.00f, 0.00f, 1.00f);

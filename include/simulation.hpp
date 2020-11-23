@@ -21,20 +21,20 @@ class context;
 inline namespace constants
 {
     template <
-        typename Length = units::si::length<units::si::metre>,
-        typename Mass   = units::si::mass<units::si::kilogram>,
-        typename Force  = units::si::force<units::si::newton>
+        typename Length = units::physical::si::length<units::physical::si::metre>,
+        typename Mass   = units::physical::si::mass<units::physical::si::kilogram>,
+        typename Force  = units::physical::si::force<units::physical::si::newton>
     >
     using G_type = decltype(Force{} * Length{} * Length{} / (Mass{} * Mass{}));
     template <
-        typename Length = units::si::length<units::si::metre>,
-        typename Mass   = units::si::mass<units::si::kilogram>,
-        typename Force  = units::si::force<units::si::newton>
+        typename Length = units::physical::si::length<units::physical::si::metre>,
+        typename Mass   = units::physical::si::mass<units::physical::si::kilogram>,
+        typename Force  = units::physical::si::force<units::physical::si::newton>
     > constexpr inline
     auto G = G_type<Length, Mass, Force>{G_type<>{6.67e-11}};
 } // namespace constants
 
-void simulation(brun::context & ctx, units::si::time<units::si::day> const days_per_second);
+void simulation(brun::context & ctx, units::physical::si::time<units::physical::si::day> const days_per_second);
 
 } // namespace brun
 

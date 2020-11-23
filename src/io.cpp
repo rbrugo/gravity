@@ -197,10 +197,10 @@ namespace
 
 void render_cycle(
     brun::context & ctx,
-    units::si::frequency<units::si::hertz> const fps
+    units::physical::si::frequency<units::physical::si::hertz> const fps
 ) noexcept
 {
-    using namespace units::si::literals;
+    using namespace units::physical::si::literals;
     auto const freq = fps * 1q_s / 1q_us;
     auto const time_for_frame = std::chrono::microseconds{int((1./freq).count())}; // FIXME is this correct?
 

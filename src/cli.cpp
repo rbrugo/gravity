@@ -34,8 +34,8 @@ auto brun::parse_cli(int argc, char const * argv[])
         return tl::expected<simulation_params, std::string>{tl::unexpect, ""};
     }
     auto params = simulation_params{
-        units::si::time<units::si::day>{days_per_second},
-        units::si::frequency<units::si::hertz>{fps},
+        units::physical::si::time<units::physical::si::day>{days_per_second},
+        units::physical::si::frequency<units::physical::si::hertz>{fps},
         brun::position_scalar{view_radius},
         std::move(filename)
     };

@@ -18,8 +18,8 @@ namespace brun
 
 struct simulation_params
 {
-    units::si::time<units::si::day> days_per_second;
-    units::si::frequency<units::si::hertz> fps;
+    units::physical::si::time<units::physical::si::day> days_per_second;
+    units::physical::si::frequency<units::physical::si::hertz> fps;
     brun::position_scalar view_radius;
     std::string filename;
 };

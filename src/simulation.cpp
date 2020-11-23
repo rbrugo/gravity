@@ -1,17 +1,18 @@
-/** @author      : Riccardo Brugo (brugo.riccardo@gmail.com) @file        :
- * simulation @created     : Tuesday Mar 24, 2020 23:51:51 CET @license     :
- * MIT
+/**
+ * @author      : Riccardo Brugo (brugo.riccardo@gmail.com)
+ * @file        : simulation
+ * @created     : Tuesday Mar 24, 2020 23:51:51 CET
+ * @license     : MIT
  */
 
 #include <mutex>
 #include <thread>
 #include <vector>
-#include <algorithm>                 // std::for_each
+#include <algorithm>                 // std::for_each, std::views::iota
 #include <execution>                 // for parallelism    (std::execution::par_unseq)
 
 #include <fmt/format.h>              // formatting         (fmt::print, fmt::format)
 #include <fmt/chrono.h>              // compatibility with std::chrono
-#include <range/v3/view/iota.hpp>    // iota function for generating ranges of numbers
 
 #include "context.hpp"
 #include "simulation.hpp"
@@ -19,14 +20,15 @@
 namespace brun
 {
 
-using namespace units::si::literals;
-using units::si::operator""q_d;
+using units::physical::si::operator""q_d;
+using units::physical::si::operator""q_h;
+using units::physical::si::operator""q_min;
 using brun::literals::operator""_Gm;
 using brun::literals::operator""_kmps;
 using brun::literals::operator""_Yg;
 
 // Compute a step of simulation with a time interval of `dt` (default: 1 day)
-void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_d)
+void update(brun::context & ctx, units::physical::si::time<units::physical::si::day> const dt = 1.q_d)
 {
     auto & reg = ctx.reg;
     //A list of objects which are movable
@@ -58,11 +60,9 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
                 auto const unit      = brun::unit(distance);
                 auto const mass      = reg.get<brun::mass>(other);
                 // Workaround for ambiguous overload resolution
-                /* auto const res       = (mass / (distance * distance)) * brun::unit(distance); */
+                auto const res       = (mass / (distance * distance)) * brun::unit(distance);
                 /* auto const res       = brun::unit(distance) * mass / (distance * distance); */
-                auto const res       = la::operator*(
-                    mass / (distance * distance), brun::unit(distance)
-                );
+                /* auto const res       = la::operator*( mass / (distance * distance), brun::unit(distance)); */
                 accumulator = accumulator + res;
             }
             return - G * accumulator;
@@ -91,9 +91,8 @@ void update(brun::context & ctx, units::si::time<units::si::day> const dt = 1.q_
     }
 }
 
-void simulation(brun::context & ctx, units::si::time<units::si::day> const days_per_second)
+void simulation(brun::context & ctx, units::physical::si::time<units::physical::si::day> const days_per_second)
 {
-    namespace rvw = ranges::views;
     auto & registry = ctx.reg;
     // Some config params - some will be configurable from the config file in the future
     /// const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
@@ -118,23 +117,23 @@ void simulation(brun::context & ctx, units::si::time<units::si::day> const days_
     // So we will use                                       dτ := dt·η/(n+1)
     //  and will make `n+1` steps of simulation with duration dτ each.
     auto const ratio = days_per_millisecond / dt;
-    auto const n_steps = std::floor(ratio) + 1;
+    auto const n_steps = std::floor(ratio.count()) + 1;
     auto const timestep = dt * ratio / n_steps;
     auto const total_calc_begin = std::chrono::steady_clock::now();
     fmt::print(stderr, "Δt: {}\ndt: {}\ntimestep: {}\n", days_per_millisecond, dt, timestep);
 
     ctx.status.store(brun::status::running, std::memory_order::release);
-    for (auto const day : rvw::iota(first_day, last_day)) {
+    for (auto const day : std::views::iota(first_day, last_day)) {
         accumulator -= 24.q_h;
         brun::dump(registry, day);  // Once a day, dumps data on terminal
-        if (ctx.status.load(std::memory_order::acquire) == brun::status::stopped) {
-            fmt::print(stderr, "Simulation stopped\n");
-            return;
-        }
         auto const day_calc_begin = std::chrono::steady_clock::now();
         do {
+            if (ctx.status.load(std::memory_order::acquire) == brun::status::stopped) {
+                fmt::print(stderr, "Simulation stopped\n");
+                return;
+            }
             auto const begin = std::chrono::steady_clock::now();
-            for ([[maybe_unused]] auto _ : rvw::iota(0, n_steps)) {
+            for ([[maybe_unused]] auto _ : std::views::iota(0, n_steps)) {
                 update(ctx, timestep);
                 accumulator += timestep;
             }
