@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+build/
+
+3rd_party/include/toml.hpp.bak
+
+.vim/
+
+.cache/
