@@ -9,6 +9,7 @@
 #include "common.hpp"
 
 #include <mutex>
+#include <numbers>
 
 #include <range/v3/view/tail.hpp>
 #include <range/v3/view/zip.hpp>
@@ -85,7 +86,7 @@ namespace
         // Then we will discard every object whose rescaled displacement is greater than 1 and compute
         //  the graphics to display (the circle and the motion trail) for every survived object
         auto entities  = registry.view<brun::position const, SDLpp::color const, brun::px_radius const>();
-        auto const k = std::max(w, h) * 0.5;
+        auto const k = std::hypot(w, h) * 0.5; //std::max(w, h) * 0.5;
         auto circles = std::vector<SDLpp::paint::circle>(); circles.reserve(registry.size());
         auto lines   = std::vector<SDLpp::paint::line  >(); lines.reserve(registry.view<brun::trail const>().size());
         for (auto const entt : entities) {
@@ -126,8 +127,8 @@ namespace
             };
 
             namespace rvw = ::ranges::views;
-            for (auto const [pts, alpha] : rvw::zip(rvw::zip(scaled_trail, rvw::tail(scaled_trail)), alpha)) {
-                lines.push_back(to_line(pts, alpha));
+            for (auto const [p0, p1, alpha] : rvw::zip(scaled_trail, rvw::tail(scaled_trail), alpha)) {
+                lines.push_back(to_line(std::pair{p0, p1}, alpha));
             }
         }
 

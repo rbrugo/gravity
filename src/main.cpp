@@ -34,13 +34,13 @@ int main(int argc, char const * argv[])
     auto ctx = brun::context{};
     ctx.reg = brun::load_data(not filename.empty() ? filename : "../planets.toml"); // Registry is loaded from file
     ctx.view_radius = view_radius;
-    ctx.min_max_view_radius.second = [&ctx]() {
+    ctx.min_max_view_radius.second = [&ctx, view_radius]() {
         auto const entities = ctx.reg.view<brun::position const>();
         auto const positions = entities
                              | std::views::transform([&](auto e) { return entities.get<brun::position const>(e); })
-                             | std::views::transform([ ](auto const & p) { return brun::norm(p); })
+                             | std::views::transform([ ](auto const & p) { return brun::norm(p) * 1.1; })
                              ;
-        return *std::ranges::max_element(positions);
+        return std::max(*std::ranges::max_element(positions), view_radius);
     }();
 
     // Creates a thread dedicated to simulation
