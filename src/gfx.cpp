@@ -62,7 +62,7 @@ namespace
 
         // Rescale the vector such that the screen has "radius" 1.
         // FIXME this way one cannot see planets in the corner, outside of the circle
-        auto const scale_coeff = 1. / view_radius * std::max(w, h) * 0.5; // px/Gm
+        auto const scale_coeff = 1. / view_radius * std::min(w, h) * 0.5; // px/Gm
         auto rescale = [scale_coeff](auto const & _1) {
             auto const tmp = scale_coeff * _1; // this is a vector of dimensionless units;
                                                // should be ok, but fails to compile
@@ -86,7 +86,7 @@ namespace
         // Then we will discard every object whose rescaled displacement is greater than 1 and compute
         //  the graphics to display (the circle and the motion trail) for every survived object
         auto entities  = registry.view<brun::position const, SDLpp::color const, brun::px_radius const>();
-        auto const k = std::hypot(w, h) * 0.5; //std::max(w, h) * 0.5;
+        auto const k = std::hypot(w, h) * 0.5;
         auto circles = std::vector<SDLpp::paint::circle>(); circles.reserve(registry.size());
         auto lines   = std::vector<SDLpp::paint::line  >(); lines.reserve(registry.view<brun::trail const>().size());
         for (auto const entt : entities) {
@@ -110,6 +110,7 @@ namespace
             auto scaled_trail = trail
                               | std::views::transform(compute_displacement)
                               | std::views::transform(rescale)
+                              | std::views::filter([k](auto const p) { return brun::norm(p) < k * 1.1; })
                               | std::views::transform(rotate)
                               ;
             auto const alpha = std::views::iota(1ul, trail.size() + 1)

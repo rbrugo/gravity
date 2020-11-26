@@ -94,8 +94,9 @@ namespace
         constexpr auto input_delay = std::chrono::milliseconds{10};
         auto changes = std::uint8_t{0};
         enum : uint8_t { displacement_changed = 0b1 << 0, zoom_changed = 0b1 << 1, rotation_changed = 0b1 << 2 };
-        auto displacement      = brun::position{};
-        auto delta_view_radius = brun::position_scalar{};
+        auto displacement        = brun::position{};
+        auto delta_view_radius   = brun::position_scalar{};
+        auto radius_scale_factor = 1.f;
         /* auto rotation          = brun::rotation_matrix{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}}; */
         /* constexpr auto sin = std::sin(M_PI/100); */
         /* constexpr auto cos = std::cos(M_PI/100); */
@@ -143,6 +144,16 @@ namespace
                 changes |= zoom_changed;
                 delta_view_radius += 10._Gm;
                 break;
+            case '*':
+            case SDLK_KP_MULTIPLY:
+                changes |= zoom_changed;
+                radius_scale_factor /= 1.1;
+                break;
+            case '/':
+            case SDLK_KP_DIVIDE:
+                changes |= zoom_changed;
+                radius_scale_factor *= 1.1;
+                break;
             case 'a':
                 changes |= rotation_changed;
                 ++rotation.z_axis;
@@ -168,7 +179,8 @@ namespace
             auto lock = std::scoped_lock{ctx};
             if ((changes & zoom_changed) != 0) {
                 auto const [min, max] = ctx.min_max_view_radius;
-                ctx.view_radius = std::clamp(ctx.view_radius + delta_view_radius, min, max);
+                auto const new_radius = (ctx.view_radius + delta_view_radius) * radius_scale_factor;
+                ctx.view_radius = std::clamp(new_radius, min, max);
             }
             if ((changes & rotation_changed) != 0) {
                 ctx.rotation.z_axis += rotation.z_axis;
@@ -232,7 +244,7 @@ void render_cycle(
 
     if (glewInit() != GLEW_OK) {
         fmt::print(stderr, "Failed to load OpenGL loader!\n");
-        std::exit(1); //TODO
+        return;
     }
 
     // Init Dear ImGUI
