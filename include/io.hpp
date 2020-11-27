@@ -20,6 +20,7 @@
 
 #include "common.hpp"
 #include "context.hpp"
+#include "simulation_params.hpp"
 
 namespace brun
 {
@@ -28,10 +29,7 @@ auto center_of_mass(entt::registry & registry) -> brun::position;
 void display(brun::context const &, SDLpp::renderer &, brun::position::value_type const max_radius);
 
 // Generates a function which must be invoked in a thread, which refresh the graphics at a certain rate
-void render_cycle(
-    brun::context & ctx,
-    units::physical::si::frequency<units::physical::si::hertz> const fps
-) noexcept;
+void render_cycle(brun::context & ctx, simulation_params const & params) noexcept;
 
 } // namespace brun
 

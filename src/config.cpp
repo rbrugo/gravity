@@ -128,7 +128,7 @@ namespace detail
 #ifndef GRAVITY_NO_JSON
     // Build a registry from a JSON table
     auto build_registry(nlohmann::json const & json) //FIXME //TODO incomplete
-        -> entt::registry
+        -> std::pair<entt::registry, float>
     {
         using brun::literals::operator""_Gm;
         using brun::literals::operator""_kmps;
@@ -149,7 +149,7 @@ namespace detail
                 uint8_t((color & 0xFF0000) >> 16), uint8_t((color & 0x00FF00) >> 8), uint8_t(color & 0x0000FF)
             }); //this or without default?
         }
-        return registry;
+        return {std::move(registry), 5.f};
     }
 #endif // GRAVITY_NO_JSON
 
@@ -187,18 +187,20 @@ namespace detail
     void extract_object(
         entt::registry & registry, toml::table const & table,
         tl::expected<int32_t, std::string> const & default_trail_length,
+        tl::expected<float, std::string> const & default_trail_density,
         tl::expected<int32_t, std::string> const & default_color,
         tl::expected<float, std::string> const & default_px_radius,
         brun::position const base_position = brun::position{} * 0.,
         brun::velocity const base_velocity = brun::velocity{} * 0.
     )
     {
-        auto const name     = table["name"].as_string()->get();
-        auto const mass     = expect<double>(table, "mass");
-        auto const pos_node = table["distance"];
-        auto const vel_node = table["orbital_velocity"]; // TODO: not needed for all objects
-        auto const trail    = expect<int32_t>(table, "motion_trail_length", *default_trail_length);
-        auto const color    = expect<int32_t>(table, "color", *default_color);
+        auto const name      = table["name"].as_string()->get();
+        auto const mass      = expect<double>(table, "mass");
+        auto const pos_node  = table["distance"];
+        auto const vel_node  = table["orbital_velocity"]; // TODO: not needed for all objects
+        auto const trail_len = expect<int32_t>(table, "motion_trail_length",  *default_trail_length);
+        auto const trail_den = expect<int32_t>(table, "motion_trail_density", *default_trail_density);
+        auto const color     = expect<int32_t>(table, "color", *default_color);
         auto const px_radius = expect<float>(table, "px_radius", *default_px_radius);
 
         auto const position = build_vector<brun::position>(pos_node);
@@ -238,9 +240,9 @@ namespace detail
             uint8_t((*color & 0xFF0000) >> 16), uint8_t((*color & 0x00FF00) >> 8), uint8_t(*color & 0x0000FF)
         });
         registry.emplace<brun::px_radius>(entity, *px_radius);
-        if (auto const n = trail.value(); n > 0) {
+        if (auto const n = trail_len.value(), d = trail_den.value(); d * n > 0) {
             auto & tail = registry.emplace<brun::trail>(entity);
-            tail.resize(std::clamp(n, 0, 300), *position + base_position);
+            tail.resize(n * d, *position + base_position);
         }
 
         // Planets
@@ -251,7 +253,7 @@ namespace detail
                 auto const & table = *subnode.as_table();
                 extract_object(
                     registry, table,
-                    default_trail_length, default_color, default_px_radius,
+                    default_trail_length, default_trail_density, default_color, default_px_radius,
                     *position + base_position, *velocity + base_velocity
                 );
             }
@@ -260,15 +262,16 @@ namespace detail
 
     // Build a registry from a TOML table
     auto build_registry(toml::table const & toml)
-        -> entt::registry
+        -> std::pair<entt::registry, float>
     {
         using brun::literals::operator""_Yg;
         auto registry = entt::registry{};
 
         // Get configuration
-        auto const default_trail_length = expect<int32_t>(toml["config"], "motion_trail_length", 0);
-        auto const default_color        = expect<int32_t>(toml["config"], "default_color", 0xFFFFFF);
-        auto const default_px_radius    = expect<float>(toml["config"], "default_px_radius", 5.);
+        auto const default_trail_length  = expect<int32_t>(toml["config"], "motion_trail_length", 0);
+        auto const default_trail_density = expect<float>(toml["config"], "motion_trail_density", 5);
+        auto const default_color         = expect<int32_t>(toml["config"], "default_color", 0xFFFFFF);
+        auto const default_px_radius     = expect<float>(toml["config"], "default_px_radius", 5.);
         if (not default_color.has_value()) {
             fmt::print(stderr, "{}\n", default_color.error());
             std::exit(7);
@@ -286,15 +289,17 @@ namespace detail
         auto const & planets = *toml["object"].as_array();
         for (auto const & node : planets) {
             auto const & table = *node.as_table();
-            extract_object(registry, table, default_trail_length, default_color, default_px_radius);
+            extract_object(registry, table,
+                           default_trail_length, default_trail_density,
+                           default_color, default_px_radius);
         }
-        return registry;
+        return std::pair{std::move(registry), default_trail_density.value()};
     }
 } // namespace detail
 
 // Loads data from the file passed as argument and build the registry
 auto load_data(std::filesystem::path const & data)
-    -> entt::registry
+    -> std::pair<entt::registry, float>
 {
     return std::visit([](auto const & table) { return detail::build_registry(table); }, detail::load_data(data));
 }

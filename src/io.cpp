@@ -8,6 +8,7 @@
 #include "io.hpp"
 #include "gfx.hpp"
 #include "common.hpp"
+#include "simulation_params.hpp"
 
 #include <mutex>
 
@@ -209,10 +210,12 @@ namespace
 
 void render_cycle(
     brun::context & ctx,
-    units::physical::si::frequency<units::physical::si::hertz> const fps
+    /* units::physical::si::frequency<units::physical::si::hertz> const fps */
+    simulation_params const & params
 ) noexcept
 {
     using namespace units::physical::si::literals;
+    auto const [days_per_second, fps, pts_per_day, _1, _2] = params;
     auto const freq = fps * 1q_s / 1q_us;
     auto const time_for_frame = std::chrono::microseconds{int((1./freq).count())}; // FIXME is this correct?
 
@@ -254,9 +257,13 @@ void render_cycle(
     while (ctx.status.load(std::memory_order::acquire) == brun::status::starting) {
         std::this_thread::yield();
     }
+    auto ctr = 0;
     while (ctx.status.load(std::memory_order::acquire) == brun::status::running) {
         io_events(ctx);
-        update_trail(ctx);
+        if (++ctr >= fps.count()/(days_per_second.count() * pts_per_day)) {
+            update_trail(ctx);
+            ctr = 0;
+        }
         draw_graphics(ctx, renderer, window);
     }
 

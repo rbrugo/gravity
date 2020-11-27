@@ -6,6 +6,7 @@
  */
 
 #include "cli.hpp"
+#include "simulation_params.hpp"
 
 auto brun::parse_cli(int argc, char const * argv[])
     -> tl::expected<simulation_params, std::string>
@@ -36,6 +37,7 @@ auto brun::parse_cli(int argc, char const * argv[])
     auto params = simulation_params{
         units::physical::si::time<units::physical::si::day>{days_per_second},
         units::physical::si::frequency<units::physical::si::hertz>{fps},
+        5.f,
         brun::position_scalar{view_radius},
         std::move(filename)
     };

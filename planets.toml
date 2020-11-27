@@ -13,12 +13,14 @@
 # TODO: orbital_velocity_unit = "km/s"
 
 # TODO: visual_radius = 448.8
-    motion_trail_length = 10000
-    # default length for motion trail (in px) | default: 0 (disabled)
-    default_px_radius = 5.0
+    # default length for motion trail (in days) | default: 0 (disabled)
+    motion_trail_length = 45
+    # default density for motion trail (in pts/day) | default: 5
+    motion_trail_density = 10
     # default radius for objects (in px)      | default: 5.
-    default_color = 0x994C00
+    default_px_radius = 5.0
     # default color for objects (hex or int)  | default: 0x994C00
+    default_color = 0x994C00
 
 [[object]]
     name = "Mario"

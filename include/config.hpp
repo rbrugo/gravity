@@ -14,7 +14,7 @@
 namespace brun
 {
 
-auto load_data(std::filesystem::path const & data) -> entt::registry;
+auto load_data(std::filesystem::path const & data) -> std::pair<entt::registry, float>;
 
 } // namespace brun
 

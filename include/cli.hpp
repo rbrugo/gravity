@@ -10,19 +10,10 @@
 
 #include <tl/expected.hpp>
 #include <lyra/lyra.hpp>
-
-#include "common.hpp"
+#include "simulation_params.hpp"
 
 namespace brun
 {
-
-struct simulation_params
-{
-    units::physical::si::time<units::physical::si::day> days_per_second;
-    units::physical::si::frequency<units::physical::si::hertz> fps;
-    brun::position_scalar view_radius;
-    std::string filename;
-};
 
 auto parse_cli(int argc, char const * argv[]) -> tl::expected<simulation_params, std::string>;
 
