@@ -97,7 +97,7 @@ void simulation(brun::context & ctx, units::physical::si::time<units::physical::
     // Some config params - some will be configurable from the config file in the future
     /// const     auto view_radius = 1.1 * std::sqrt(2) * 149.6_Gm;
     constexpr auto first_day = 1;
-    constexpr auto last_day = 365 * 10;
+    constexpr auto last_day = 365;// * 10;
     /// auto const fps = units::si::frequency<units::si::hertz>{60};
     constexpr auto dt = 10.q_min;        // Maximum of the simulation
 
@@ -116,35 +116,32 @@ void simulation(brun::context & ctx, units::physical::si::time<units::physical::
     // It's better to define a new quantity dτ such that    η·dt = (n+1)·dτ
     // So we will use                                       dτ := dt·η/(n+1)
     //  and will make `n+1` steps of simulation with duration dτ each.
-    auto const ratio = days_per_millisecond / dt;
+    auto const ratio = static_cast<decltype(dt)>(days_per_millisecond) / dt;
     auto const n_steps = std::floor(ratio.count()) + 1;
     auto const timestep = dt * ratio / n_steps;
-    auto const total_calc_begin = std::chrono::steady_clock::now();
-    fmt::print(stderr, "Δt: {}\ndt: {}\ntimestep: {}\n", days_per_millisecond, dt, timestep);
+    fmt::print(stderr, "Δt: {}\n", days_per_millisecond);   // Δt
+    fmt::print(stderr, "dt: {}\n", dt);                     // dt
+    fmt::print(stderr, "η:  {}\n", ratio);                  // η
+    fmt::print(stderr, "timestep: {}\n", timestep);         // dτ
+    fmt::print(stderr, "n_steps: {}\n", n_steps);           // n + 1
 
     ctx.status.store(brun::status::running, std::memory_order::release);
     for (auto const day : std::views::iota(first_day, last_day)) {
         accumulator -= 24.q_h;
         brun::dump(registry, day);  // Once a day, dumps data on terminal
-        auto const day_calc_begin = std::chrono::steady_clock::now();
         do {
             if (ctx.status.load(std::memory_order::acquire) == brun::status::stopped) {
                 fmt::print(stderr, "Simulation stopped\n");
                 return;
             }
-            auto const begin = std::chrono::steady_clock::now();
             for ([[maybe_unused]] auto _ : std::views::iota(0, n_steps)) {
+                auto const begin = std::chrono::steady_clock::now();
                 update(ctx, timestep);
-                accumulator += timestep;
+                accumulator = accumulator + timestep;
+                // Sign, `sleep` is not precise enough
+                std::this_thread::sleep_until(begin + std::chrono::microseconds{990} / (n_steps));
             }
-            std::this_thread::sleep_until(begin + std::chrono::microseconds{900});
-
         } while (accumulator < 24.q_h);
-        auto const day_calc_end = std::chrono::steady_clock::now();
-
-        auto const day_calc_time = (day_calc_end - day_calc_begin);
-        auto const avg_calc_time = (day_calc_end - total_calc_begin)/(day - first_day + 1);
-        fmt::print("This day calc time: {}\nAverage simulation rate: {}\n", day_calc_time, avg_calc_time);
     }
     ctx.status.store(brun::status::stopped, std::memory_order::release);
     brun::dump(registry, last_day);

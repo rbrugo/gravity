@@ -254,10 +254,9 @@ void render_cycle(
     while (ctx.status.load(std::memory_order::acquire) == brun::status::starting) {
         std::this_thread::yield();
     }
-    int_fast16_t count = 0;
     while (ctx.status.load(std::memory_order::acquire) == brun::status::running) {
         io_events(ctx);
-        if (++count == fps.count() / 10) {update_trail(ctx); count = 0;}
+        update_trail(ctx);
         draw_graphics(ctx, renderer, window);
     }
 
