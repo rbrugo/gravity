@@ -39,4 +39,4 @@ set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsan
 target_sources(gravity PRIVATE src/main.cpp src/common.cpp src/io.cpp src/config.cpp src/cli.cpp src/simulation.cpp src/gfx.cpp 3rd_party/src/imgui_impl_opengl3.cpp 3rd_party/src/imgui_impl_sdl.cpp)
 target_link_libraries(gravity PRIVATE -lGL -lGLEW ${CONAN_LIBS} ${Threads} -lSDL2_gfx -lsndio -ltbb)
 
-target_include_directories(gravity PRIVATE ./include SYSTEM ./3rd_party/include/)
+target_include_directories(gravity PRIVATE ./include SYSTEM ./3rd_party/include/ ./SDLpp/include/)
