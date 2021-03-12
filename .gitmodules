@@ -1,3 +1,4 @@
 [submodule "SDLpp"]
 	path = SDLpp
 	url = git@github.com:rbrugo/SDLpp.git
+	branch = math-paint-collision
