@@ -18,9 +18,14 @@
 #endif // GRAVITY_NO_JSON
 
 #include <tl/expected.hpp>
-#include <range/v3/action/transform.hpp>
+// #include <range/v3/action/transform.hpp>
 
 #include <SDLpp/color.hpp>
+
+// #include <experimental/mdspan>
+// namespace STD_LA :: detail {
+// using std::experimental::dynamic_extent;
+// } // namespace STD_LA :: detail
 #include "common.hpp"
 
 namespace brun
@@ -46,7 +51,9 @@ namespace detail
         }
 
         constexpr auto tolower = [](unsigned char ch) noexcept { return std::tolower(ch); };
-        auto const ext = data_path.extension().string() | ranges::actions::transform(tolower);
+        // auto const ext = data_path.extension().string() | ranges::actions::transform(tolower);
+        auto ext = data_path.extension().string();
+        std::ranges::transform(ext, ext.begin(), tolower);
         if (ext == ".json") {
 #ifndef GRAVITY_NO_JSON
             auto json = nlohmann::json{};

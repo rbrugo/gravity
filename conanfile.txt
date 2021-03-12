@@ -4,7 +4,6 @@ linear_algebra/0.7.0@public-conan/testing
 entt/3.5.2
 imgui/1.79
 sdl2/2.0.10@bincrafters/stable
-range-v3/0.10.0
 fmt/7.1.2
 lyra/1.5.1
 nlohmann_json/3.9.1

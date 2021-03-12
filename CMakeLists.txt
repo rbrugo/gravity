@@ -7,7 +7,8 @@ project( gravity
 
 set(CONAN_SYSTEM_INCLUDES "On")
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+conan_basic_setup(TARGETS)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
 
 add_executable( gravity )
 target_compile_features( gravity PUBLIC cxx_std_20 )
@@ -36,7 +37,17 @@ target_link_options(gravity PRIVATE)
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
 set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -fsanitize=undefined -fsanitize=null -fsanitize=unreachable -fsanitize=return -fsanitize=signed-integer-overflow -fsanitize=bounds -fsanitize=alignment")
 
-target_sources(gravity PRIVATE src/main.cpp src/common.cpp src/io.cpp src/config.cpp src/cli.cpp src/simulation.cpp src/gfx.cpp 3rd_party/src/imgui_impl_opengl3.cpp 3rd_party/src/imgui_impl_sdl.cpp)
-target_link_libraries(gravity PRIVATE -lGL -lGLEW ${CONAN_LIBS} ${Threads} -lSDL2_gfx -lsndio -ltbb)
+target_sources(gravity
+    PRIVATE
+        src/main.cpp src/common.cpp src/io.cpp src/config.cpp src/cli.cpp src/simulation.cpp src/gfx.cpp
+        3rd_party/src/imgui_impl_opengl3.cpp 3rd_party/src/imgui_impl_sdl.cpp
+)
+target_link_libraries(gravity
+    PRIVATE -lGL -lGLEW
+    CONAN_PKG::mp-units CONAN_PKG::linear_algebra CONAN_PKG::entt CONAN_PKG::imgui
+    CONAN_PKG::fmt CONAN_PKG::lyra CONAN_PKG::nlohmann_json CONAN_PKG::tomlplusplus
+    CONAN_PKG::sdl2
+    ${Threads} -lSDL2_gfx -lsndio -ltbb
+)
 
 target_include_directories(gravity PRIVATE ./include SYSTEM ./3rd_party/include/ ./SDLpp/include/)

@@ -44,6 +44,7 @@ namespace STD_LA
     template <typename T, std::size_t N>
     inline
     std::ostream & operator<<(std::ostream & out, STD_LA::fs_vector<T, N> const & v)
+    // std::ostream & operator<<(std::ostream & out, STD_LA::fixed_size_vector<T, N> const & v)
     {
         out << fmt::format("({:%.3gQ}, {:%.3gQ}, {:%.3gQ}) {:%q}", v[0], v[1], v[2], v[2]);
         return out;
@@ -52,6 +53,7 @@ namespace STD_LA
 
 template <typename T, typename N>
 struct fmt::formatter<la::vector<T, N>>
+// struct fmt::formatter<la::basic_vector<T, N>>
 {
     char specifier = '\0';
     std::uint8_t precision = -1;
@@ -97,6 +99,7 @@ struct fmt::formatter<la::vector<T, N>>
 
     template <typename FormatContext>
     auto format(la::vector<T, N> const & v, FormatContext & ctx)
+    // auto format(la::basic_vector<T, N> const & v, FormatContext & ctx)
     {
         auto quantity = fmt::format(
             "{}:%{}{}Q{}", '{',
@@ -133,6 +136,8 @@ namespace brun
     // Some type aliases
     using position_scalar = units::physical::si::length<units::physical::si::gigametre>;      // Gm type
     using velocity_scalar = units::physical::si::speed<units::physical::si::kilometre_per_second>;   // km/s type
+    // using position  = la::fixed_size_vector<position_scalar, 3>;       // 3-vec of Gm
+    // using velocity  = la::fixed_size_vector<velocity_scalar, 3>;       // 3-vec of km/s
     using position  = la::fs_vector<position_scalar, 3>;       // 3-vec of Gm
     using velocity  = la::fs_vector<velocity_scalar, 3>;       // 3-vec of km/s
     using mass      = units::physical::si::mass<units::physical::si::yottagram>;                        // Yg type
@@ -140,6 +145,7 @@ namespace brun
     using tag       = std::string;
     using px_radius = float;
     using rotation_matrix = la::fs_matrix<brun::position_scalar::rep, 3, 3>;
+    // using rotation_matrix = la::fixed_size_matrix<brun::position_scalar::rep, 3, 3>;
 
     struct rotation_info
     {
@@ -160,18 +166,22 @@ namespace brun
     template <typename ET, typename OT>
     constexpr
     auto norm(la::vector<ET, OT> const & v) noexcept
+    // auto norm(la::basic_vector<ET, OT> const & v) noexcept
         -> typename la::vector<ET,OT>::value_type
+        // -> typename la::basic_vector<ET,OT>::element_type
     {
         auto const sq_norm = v * v;
         if constexpr(not std::is_floating_point_v<typename std::decay<decltype(sq_norm)>::type>) {
             return units::sqrt(sq_norm);
         } else {
+            // return typename la::basic_vector<ET,OT>::element_type{std::sqrt(sq_norm)};
             return typename la::vector<ET,OT>::value_type{std::sqrt(sq_norm)};
         }
     }
 
     template <typename ET, typename OT>
     constexpr
+    // auto unit(la::basic_vector<ET, OT> const & v) noexcept
     auto unit(la::vector<ET, OT> const & v) noexcept
     {
         return 1./norm(v) * v;

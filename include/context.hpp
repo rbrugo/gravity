@@ -37,14 +37,16 @@ constexpr
 auto absolute_position(entt::registry const & reg, follow_t const & camera)
     -> brun::position
 {
-    return std::visit([&reg]<typename Follow>(Follow const & obj) {
+    return std::visit([&reg]<typename Follow>(Follow const & obj) -> brun::position {
         if constexpr (std::is_same_v<Follow, follow::com>) {
             return center_of_mass(reg) + obj.offset;
         }
-        if constexpr(std::is_same_v<Follow, follow::target>) {
+        else if constexpr(std::is_same_v<Follow, follow::target>) {
             return reg.get<brun::position>(obj.id) + obj.offset;
         }
-        return obj.offset;
+        else {
+            return obj.offset;
+        }
     }, camera);
 }
 
