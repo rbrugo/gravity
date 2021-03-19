@@ -1,9 +1,9 @@
 
 cmake_minimum_required(VERSION 3.16.2)
 
-project( gravity
-         VERSION 0.1
-         DESCRIPTION " ")
+project(gravity
+        VERSION 0.1
+        DESCRIPTION " ")
 
 set(CONAN_SYSTEM_INCLUDES "On")
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -46,8 +46,8 @@ target_link_libraries(gravity
     PRIVATE -lGL -lGLEW
     CONAN_PKG::mp-units CONAN_PKG::linear_algebra CONAN_PKG::entt CONAN_PKG::imgui
     CONAN_PKG::fmt CONAN_PKG::lyra CONAN_PKG::nlohmann_json CONAN_PKG::tomlplusplus
-    CONAN_PKG::sdl2
-    ${Threads} -lSDL2_gfx -lsndio -ltbb
+    CONAN_PKG::sdl2 CONAN_PKG::tl-optional
+    Threads::Threads -lSDL2_gfx -lsndio -ltbb
 )
 
 target_include_directories(gravity PRIVATE ./include SYSTEM ./3rd_party/include/ ./SDLpp/include/)

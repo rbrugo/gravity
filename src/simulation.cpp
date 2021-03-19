@@ -20,15 +20,15 @@
 namespace brun
 {
 
-using units::physical::si::operator""q_d;
-using units::physical::si::operator""q_h;
-using units::physical::si::operator""q_min;
+using units::physical::si::operator""_q_d;
+using units::physical::si::operator""_q_h;
+using units::physical::si::operator""_q_min;
 using brun::literals::operator""_Gm;
 using brun::literals::operator""_kmps;
 using brun::literals::operator""_Yg;
 
 // Compute a step of simulation with a time interval of `dt` (default: 1 day)
-void update(brun::context & ctx, units::physical::si::time<units::physical::si::day> const dt = 1.q_d)
+void update(brun::context & ctx, units::physical::si::time<units::physical::si::day> const dt = 1._q_d)
 {
     auto & reg = ctx.reg;
     //A list of objects which are movable
@@ -99,14 +99,14 @@ void simulation(brun::context & ctx, units::physical::si::time<units::physical::
     constexpr auto first_day = 1;
     constexpr auto last_day = 365;// * 10;
     /// auto const fps = units::si::frequency<units::si::hertz>{60};
-    constexpr auto dt = 10.q_min;        // Maximum of the simulation
+    constexpr auto dt = 10._q_min;        // Maximum of the simulation
 
     /// auto const days_per_second = 1.q_d;  // Days to compute every second - may be selected runtime
     auto const days_per_millisecond = days_per_second / 1000;
 
     // Computes the simulation from `first_dat` to `last_day` with a step of `dt` and a cap
     //  of `production_ratio` days each second
-    auto accumulator = 24.q_h;
+    auto accumulator = 24._q_h;
     // Timestep calculation for better accuracy
     // Each ms must be computed the simulation for          Δt := days_per_millisecond
     //  in small steps of size                              dt := dt
@@ -127,7 +127,7 @@ void simulation(brun::context & ctx, units::physical::si::time<units::physical::
 
     ctx.status.store(brun::status::running, std::memory_order::release);
     for (auto const day : std::views::iota(first_day, last_day)) {
-        accumulator -= 24.q_h;
+        accumulator -= 24._q_h;
         brun::dump(registry, day);  // Once a day, dumps data on terminal
         do {
             if (ctx.status.load(std::memory_order::acquire) == brun::status::stopped) {
@@ -141,7 +141,7 @@ void simulation(brun::context & ctx, units::physical::si::time<units::physical::
                 // Sign, `sleep` is not precise enough
                 std::this_thread::sleep_until(begin + std::chrono::microseconds{990} / (n_steps));
             }
-        } while (accumulator < 24.q_h);
+        } while (accumulator < 24._q_h);
     }
     ctx.status.store(brun::status::stopped, std::memory_order::release);
     brun::dump(registry, last_day);

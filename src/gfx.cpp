@@ -185,7 +185,7 @@ void draw_camera_settings(brun::context & ctx)
     }
     if (show_list) {
         auto const selected = current_target.value_or(static_cast<entt::entity>(-1));
-        auto const group = ctx.reg.group<brun::position const, brun::tag const>();
+        auto const group = ctx.reg.view<brun::position const, brun::tag const>();
         for (auto const entt : group) {
             auto const & name = group.get<brun::tag const>(entt);
             if (ImGui::Selectable(name.c_str(), selected == entt)) {

@@ -216,7 +216,7 @@ void render_cycle(
 {
     using namespace units::physical::si::literals;
     auto const [days_per_second, fps, pts_per_day, _1, _2] = params;
-    auto const freq = fps * 1q_s / 1q_us;
+    auto const freq = fps * 1_q_s / 1_q_us;
     auto const time_for_frame = std::chrono::microseconds{int((1./freq).count())}; // FIXME is this correct?
 
     // Init SDL graphics

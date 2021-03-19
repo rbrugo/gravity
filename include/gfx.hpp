@@ -9,7 +9,7 @@
 #define GFX_HPP
 
 #include "context.hpp"
-#include <units/physical/si/frequency.h>
+#include <units/physical/si/derived/frequency.h>
 #include <SDLpp/texture.hpp>
 
 namespace brun

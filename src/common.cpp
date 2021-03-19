@@ -24,7 +24,11 @@ void dump(entt::registry & reg, std::optional<int> day)
     fmt::print(divisor);
     auto dump_single = [](auto const & tag, auto const mass, auto const position, auto const velocity) {
         /* fmt::print("|{:<10}|{:^14%.3gQ %q}|{:^43}|{:^43}|\n", tag, mass, position, velocity); */
-        fmt::print("|{:<10}|{:^14%.3gQ %q}|{:^43}|{:^43}|\n", tag, mass, position, velocity);
+        // fmt::print("|{:<10}|{:^14%.3gQ %q}|{:^43}|{:^43}|\n", tag, mass, position, velocity);
+        fmt::print("|{:<10}", tag);
+        fmt::print("|{:^14%.3gQ %q}", mass);
+        fmt::print("|{:^43}",  position);
+        fmt::print("|{:^43}|\n",  velocity);
     };
     reg.view<brun::tag, brun::mass, brun::position, brun::velocity>().each(dump_single);
     fmt::print(divisor);

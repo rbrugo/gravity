@@ -8,10 +8,10 @@
 #ifndef SIMULATION_HPP
 #define SIMULATION_HPP
 
-#include <units/physical/si/length.h>
-#include <units/physical/si/mass.h>
-#include <units/physical/si/force.h>
-#include <units/physical/si/time.h>
+#include <units/physical/si/base/length.h>
+#include <units/physical/si/base/mass.h>
+#include <units/physical/si/derived/force.h>
+#include <units/physical/si/base/time.h>
 
 namespace brun
 {

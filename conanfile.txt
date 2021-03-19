@@ -8,6 +8,7 @@ fmt/7.1.2
 lyra/1.5.1
 nlohmann_json/3.9.1
 tomlplusplus/2.2.0 # need at least version 1.3.3 to get rid of warnings
+tl-optional/1.0.0
 
 [generators]
 cmake

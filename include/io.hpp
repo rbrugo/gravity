@@ -15,8 +15,8 @@
 
 #include <SDLpp/texture.hpp>
 
-#include <units/physical/si/time.h>
-#include <units/physical/si/frequency.h>
+#include <units/physical/si/base/time.h>
+#include <units/physical/si/derived/frequency.h>
 
 #include "common.hpp"
 #include "context.hpp"
