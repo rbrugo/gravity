@@ -53,7 +53,20 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                             Enable warnings                            #
+#                           imgui integration                            #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+add_library(imgui_sdl_integration OBJECT)
+target_sources(imgui_sdl_integration
+    PRIVATE
+        3rd_party/imgui_sdl_integration/src/imgui_impl_sdl.cpp
+        3rd_party/imgui_sdl_integration/src/imgui_impl_opengl3.cpp
+)
+target_link_libraries(imgui_sdl_integration PUBLIC CONAN_PKG::imgui grv::sdl)
+target_include_directories(imgui_sdl_integration PUBLIC 3rd_party/imgui_sdl_integration/include/)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#                            Enable warnings                             #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 add_library(project_warnings INTERFACE)
 include(cmake/compiler_warnings.cmake)
@@ -61,7 +74,7 @@ set_project_warnings(project_warnings)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                                 Gravity                                #
+#                                Gravity                                 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 add_executable(gravity)
 
@@ -69,14 +82,14 @@ target_sources(gravity
     PRIVATE
         src/main.cpp src/common.cpp src/io.cpp src/config.cpp
         src/cli.cpp src/simulation.cpp src/gfx.cpp
-        3rd_party/src/imgui_impl_opengl3.cpp 3rd_party/src/imgui_impl_sdl.cpp
+        # 3rd_party/src/imgui_impl_opengl3.cpp 3rd_party/src/imgui_impl_sdl.cpp
 )
 target_compile_features(gravity PUBLIC cxx_std_20)
 target_compile_options(gravity PRIVATE)
 target_link_libraries(gravity
     PRIVATE
         project_warnings
-        grv::sdl OpenGL::GL GLEW::GLEW -lSDL2_gfx
+        grv::sdl OpenGL::GL GLEW::GLEW -lSDL2_gfx imgui_sdl_integration
         CONAN_PKG::mp-units CONAN_PKG::linear_algebra CONAN_PKG::entt CONAN_PKG::imgui
         CONAN_PKG::fmt CONAN_PKG::lyra CONAN_PKG::nlohmann_json CONAN_PKG::tomlplusplus
         CONAN_PKG::tl-optional
