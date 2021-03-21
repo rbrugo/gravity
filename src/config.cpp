@@ -257,9 +257,9 @@ namespace detail
             fmt::print("Registering {} satellites:\n", name);
             auto const & satellites = *satellites_tbl;
             for (auto const & subnode : satellites) {
-                auto const & table = *subnode.as_table();
+                auto const & sub_table = *subnode.as_table();
                 extract_object(
-                    registry, table,
+                    registry, sub_table,
                     default_trail_length, default_trail_density, default_color, default_px_radius,
                     *position + base_position, *velocity + base_velocity
                 );

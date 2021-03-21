@@ -113,11 +113,11 @@ namespace
                               | std::views::filter([k](auto const p) { return brun::norm(p) < k * 1.1; })
                               | std::views::transform(rotate)
                               ;
-            auto const alpha = std::views::iota(1ul, trail.size() + 1)
-                             | std::views::transform([s=trail.size()](auto const blending) -> uint8_t {
-                                 return std::lerp(200., 1., blending * 1. / s);
-                             })
-                             ;
+            auto const alphas = std::views::iota(1ul, trail.size() + 1)
+                              | std::views::transform([s=trail.size()](auto const blending) -> uint8_t {
+                                  return std::lerp(200., 1., blending * 1. / s);
+                              })
+                              ;
             auto to_line = [&renderer, w,h, r,g,b](auto const pts, auto const alpha) mutable {
                 auto const [p0, p1] = pts;
                 auto const x0 = p0[0] + w/2;
@@ -128,7 +128,7 @@ namespace
             };
 
             namespace rvw = ::ranges::views;
-            for (auto const [p0, p1, alpha] : rvw::zip(scaled_trail, rvw::tail(scaled_trail), alpha)) {
+            for (auto const [p0, p1, alpha] : rvw::zip(scaled_trail, rvw::tail(scaled_trail), alphas)) {
                 lines.push_back(to_line(std::pair{p0, p1}, alpha));
             }
         }
@@ -204,7 +204,7 @@ void draw_camera_settings(brun::context & ctx)
     auto const v_min = ctx.min_max_view_radius.first.count();
     auto const v_max = ctx.min_max_view_radius.second.count();
     auto const current_radius = ctx.view_radius; _1.unlock();
-    auto radius_count = static_cast<double>(current_radius.count());
+    auto radius_count = current_radius.count();
     auto const step = brun::position_scalar{0.1}.count();
 
     ImGui::SetNextItemWidth(150 + 86);

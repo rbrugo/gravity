@@ -44,9 +44,11 @@ void update(brun::context & ctx, units::physical::si::time<units::physical::si::
     struct data_node { entt::entity entity; brun::position pos; brun::velocity vel; };
     auto updated = std::vector<data_node>{}; updated.reserve(movables.size());
     auto updated_mtx = std::mutex{};
-    std::for_each(std::execution::par_unseq, movables.begin(), movables.end(), [&](auto const target) noexcept {
+    std::for_each(std::execution::par_unseq, movables.begin(), movables.end(), [&](auto const target) noexcept
+    {
         // Function needed to compute acceleration on a target object, given his current position
-        auto compute_acceleration = [&massives, &reg](auto const target, auto const & position) mutable noexcept {
+        auto compute_acceleration = [&massives, &reg, target](auto const & position) mutable noexcept
+        {
             using mass_on_sq_dist = la::fs_vector<decltype(1._Yg/(1._Gm*1._Gm)), 3>;
             constexpr auto G = brun::constants::G<brun::position, brun::mass>;
 
@@ -70,13 +72,13 @@ void update(brun::context & ctx, units::physical::si::time<units::physical::si::
 
         // Euler-Richardson algorithm
         auto const & [r0, v0] = reg.get<brun::position, brun::velocity>(target);
-        auto const   a0 = compute_acceleration(target, r0);
+        auto const    a0 = compute_acceleration(r0);
 
         // step 1
         auto const v_mid = v0 + 0.5 * a0 * dt;
         auto const r_mid = r0 + 0.5 * v0 * dt;
         // step 2
-        auto const a_mid = compute_acceleration(target, r_mid);
+        auto const a_mid = compute_acceleration(r_mid);
         // step 3
         auto const r_fin = r0 + v_mid * dt;
         auto const v_fin = v0 + a_mid * dt;
