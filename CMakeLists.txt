@@ -15,13 +15,14 @@ include(cmake/conan.cmake)
 set(CONAN_DEPENDENCIES
     mp-units/0.6.0
     linear_algebra/0.7.0@public-conan/testing
-    entt/3.5.2
+    entt/3.6.0
     imgui/1.79
     fmt/7.1.2
     lyra/1.5.1
     nlohmann_json/3.9.1
     tomlplusplus/2.2.0 # need at least version 1.3.3 to get rid of warnings
     tl-optional/1.0.0
+    tl-expected/1.0.0
 )
 if (IMPORT_SDL_FROM STREQUAL "CONAN")
     list(APPEND CONAN_DEPENDENCIES sdl2/2.0.10@bincrafters/stable)
@@ -92,7 +93,7 @@ target_link_libraries(gravity
         grv::sdl OpenGL::GL GLEW::GLEW -lSDL2_gfx imgui_sdl_integration
         CONAN_PKG::mp-units CONAN_PKG::linear_algebra CONAN_PKG::entt CONAN_PKG::imgui
         CONAN_PKG::fmt CONAN_PKG::lyra CONAN_PKG::nlohmann_json CONAN_PKG::tomlplusplus
-        CONAN_PKG::tl-optional
+        CONAN_PKG::tl-optional CONAN_PKG::tl-expected
         Threads::Threads $<$<CXX_COMPILER_ID:GNU>:-ltbb>
 )
 target_include_directories(gravity

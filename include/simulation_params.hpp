@@ -8,6 +8,7 @@
 #ifndef SIMULATION_PARAM_HPP
 #define SIMULATION_PARAM_HPP
 
+#include <units/physical/si/derived/frequency.h>
 #include "common.hpp"
 
 namespace brun

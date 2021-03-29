@@ -20,7 +20,8 @@
 #include <entt/entt.hpp>
 
 #include <units/math.h>
-#include <units/physical/si/si.h>
+#include <units/physical/si/base/mass.h>
+#include <units/physical/si/derived/speed.h>
 
 #include <range/v3/numeric/accumulate.hpp>
 
@@ -184,8 +185,8 @@ namespace brun
         using pair = std::pair<weighted_position, brun::mass>;
 
         auto const pos = [&registry](entt::entity const entt) mutable {
-            auto const [pos, mass] = registry.get<Component, brun::mass>(entt);
-            return pair{pos * mass, mass};
+            auto const [distance, mass] = registry.get<Component, brun::mass>(entt);
+            return pair{distance * mass, mass};
         };
         auto objects = registry.view<Component const, brun::mass const>();
         auto const [wpos, total_mass] = ::ranges::accumulate(objects, pair{}, pairwise_sum, pos);
